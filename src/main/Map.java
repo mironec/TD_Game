@@ -1,6 +1,6 @@
 package main;
 
-import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -16,7 +16,7 @@ public class Map {
 	private int width;
 	private int height;
 	private byte[] data;
-	private Image image;
+	private BufferedImage image;
 	
 	public static final int METHOD_LOAD_FILE=0;
 	
@@ -81,7 +81,11 @@ public class Map {
 		try {
 			URL url = new URL(m.getCodeBase().toString() + "mapImages/" + map.substring(0,map.lastIndexOf('.')) + ".png");
 			if(url.openConnection().getContentLength()>0){
-				image = ImageIO.read(url).getScaledInstance(getWidth()*m.getGame().getTileWidth(), getHeight()*m.getGame().getTileWidth(), Image.SCALE_DEFAULT);
+				BufferedImage img = ImageIO.read(url);
+				image = new BufferedImage(getWidth()*m.getGame().getTileWidth(),getHeight()*m.getGame().getTileWidth(),BufferedImage.TYPE_INT_ARGB);
+				image.getGraphics().drawImage(img, 0, 0, 
+						getWidth()*m.getGame().getTileWidth(), getHeight()*m.getGame().getTileWidth(),
+						0, 0, img.getWidth(), img.getHeight(), m);
 			}
 			else{image=null;}
 		} catch (MalformedURLException e) {e.printStackTrace();}
@@ -112,11 +116,11 @@ public class Map {
 		this.data = data;
 	}
 
-	public Image getImage() {
+	public BufferedImage getImage() {
 		return image;
 	}
 
-	public void setImage(Image image) {
+	public void setImage(BufferedImage image) {
 		this.image = image;
 	}
 }

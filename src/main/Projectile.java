@@ -1,11 +1,15 @@
 package main;
 
-import java.awt.Image;
+import java.awt.image.BufferedImage;
 
 public class Projectile {
 	private double x;
 	private double y;
-	private Image image;
+	private BufferedImage animationStand;
+	private BufferedImage animationDeath;
+	private int animationStandDuration;
+	private int animationDeathDuration;
+	private int animationTime;
 	private Main m;
 	private NPC target;
 	private double targetX;
@@ -14,31 +18,35 @@ public class Projectile {
 	private Tower tower;
 	private Projectile previous;
 	private Projectile next;
+	private Sprite sprite;
 	
-	public Projectile(Main m, double x, double y, double targetX, double targetY, Tower tower){
+	
+	private Projectile(Main m, double x, double y, Tower tower){
 		this.m = m;
 		this.setX(x);
 		this.setY(y);
 		this.setTower(tower);
-		this.setTarget(null);
-		this.setTargetPoint(targetX,targetY);
 		this.setSpeed(0);
 		this.setPrevious(null);
 		this.setNext(null);
-		this.setImage(null);
+		this.setAnimationStand(null);
+		this.setAnimationDeath(null);
+		this.setAnimationStandDuration(1);
+		this.setAnimationDeathDuration(1);
+		this.setAnimationTime(0);
+		this.setSprite(null);
+	}
+	
+	public Projectile(Main m, double x, double y, double targetX, double targetY, Tower tower){
+		this(m, x, y, tower);
+		this.setTarget(null);
+		this.setTargetPoint(targetX,targetY);
 	}
 
 	public Projectile(Main m, double x, double y, NPC target, Tower tower){
-		this.m = m;
-		this.setX(x);
-		this.setY(y);
-		this.setTower(tower);
+		this(m, x, y, tower);
 		this.setTarget(target);
 		this.setTargetPoint(0,0);
-		this.setSpeed(0);
-		this.setPrevious(null);
-		this.setNext(null);
-		this.setImage(null);
 	}
 
 	public void move(int delta){
@@ -51,7 +59,9 @@ public class Projectile {
 			if(newDist <= 0){
 				setX(npc.getX());
 				setY(npc.getY());
+				m.getGame().destroySprite(getSprite());
 				m.getGame().destroyProjectile(this);
+				m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()));
 				npc.damage(getTower().getDamage());
 			}
 			else{
@@ -60,6 +70,42 @@ public class Projectile {
 				setX( newX );
 				setY( newY );
 			}
+		}
+		
+		else{
+			double distance = Math.pow( Math.pow(getX() - getTargetX(),2) + Math.pow(getY() - getTargetY(),2), 0.5D);
+			double newDist = distance - getSpeed()*m.getGame().getTileWidth()*delta/1000D;
+			double doDist = getSpeed()*m.getGame().getTileWidth()*delta/1000D;
+			
+			if(newDist <= 0){
+				setX(getTargetX());
+				setY(getTargetY());
+				m.getGame().destroySprite(getSprite());
+				m.getGame().destroyProjectile(this);
+				m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()));
+				tower.damageGround(this);
+			}
+			else{
+				double newX = getX()+((getTargetX()-getX())*doDist/distance);
+				double newY = getY()+((getTargetY()-getY())*doDist/distance);
+				setX( newX );
+				setY( newY );
+			}
+		}
+	}
+	
+	public void drawLogic (int delta) {
+		if(getSprite() != null &&
+		   (getSprite().getX()==getX()&&
+		   getSprite().getY()==getY()&&
+		   getSprite().getImage()==getAnimationStand() ) ){}
+		else{
+			if(getSprite()!=null){m.getGame().destroySprite(getSprite());}
+			setAnimationTime( (getAnimationTime() + delta) % getAnimationStandDuration() );
+			int phase = (int) ( (double)getAnimationTime() / (double)getAnimationStandDuration() * (double)Animation.getImagePhases(getAnimationStand()) );
+			Sprite s =  new Sprite(m, (int)getX(), (int)getY(), Animation.getImagePhase(getAnimationStand(),phase,m), this, true);
+			m.getGame().setNewSprite( s );
+			setSprite(s);
 		}
 	}
 	
@@ -79,16 +125,16 @@ public class Projectile {
 		this.y = y;
 	}
 
-	public Image getImage() {
+	/*public BufferedImage getImage() {
 		if(image==null){
 			return getTower().getProjectileImage();
 		}
 		return image;
 	}
 
-	public void setImage(Image image) {
+	public void setImage(BufferedImage image) {
 		this.image = image;
-	}
+	}*/
 
 	public NPC getTarget() {
 		return target;
@@ -152,5 +198,53 @@ public class Projectile {
 
 	public void setNext(Projectile next) {
 		this.next = next;
+	}
+
+	public Sprite getSprite() {
+		return sprite;
+	}
+
+	public void setSprite(Sprite sprite) {
+		this.sprite = sprite;
+	}
+
+	public BufferedImage getAnimationStand() {
+		return animationStand;
+	}
+
+	public void setAnimationStand(BufferedImage animationStand) {
+		this.animationStand = animationStand;
+	}
+
+	public BufferedImage getAnimationDeath() {
+		return animationDeath;
+	}
+
+	public void setAnimationDeath(BufferedImage animationDeath) {
+		this.animationDeath = animationDeath;
+	}
+
+	public int getAnimationStandDuration() {
+		return animationStandDuration;
+	}
+
+	public void setAnimationStandDuration(int animationStandDuration) {
+		this.animationStandDuration = animationStandDuration;
+	}
+
+	public int getAnimationDeathDuration() {
+		return animationDeathDuration;
+	}
+
+	public void setAnimationDeathDuration(int animationDeathDuration) {
+		this.animationDeathDuration = animationDeathDuration;
+	}
+
+	public int getAnimationTime() {
+		return animationTime;
+	}
+
+	public void setAnimationTime(int animationTime) {
+		this.animationTime = animationTime;
 	}
 }

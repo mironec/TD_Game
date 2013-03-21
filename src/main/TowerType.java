@@ -1,74 +1,72 @@
 package main;
 
-import java.awt.Image;
+public class TowerType extends Tower{
 
-public class TowerType {
+	private int id;
+	private TowerType base;
+	private TowerType previous;
+	private TowerType next;
+	private String type;
+	private Object[] args;
+	private int maxArgs=0;
 	
-	private Image image;
-	private Main m;
-	private double range;
-	private double damage;
-	private double attackSpeed;
-	private Image projectileImage;
-	private double projectileSpeed;
+	public TowerType(Main m, int id) {
+		super(m, 0, 0, null);
+		this.id = id;
+		this.args = new Object[2];
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public TowerType getBase() {
+		return base;
+	}
+
+	public void setBase(TowerType base) {
+		this.base = base;
+	}
+
+	public TowerType getPrevious() {
+		return previous;
+	}
+
+	public void setPrevious(TowerType previous) {
+		this.previous = previous;
+	}
+
+	public TowerType getNext() {
+		return next;
+	}
+
+	public void setNext(TowerType next) {
+		this.next = next;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public Object[] getArgs() {
+		return args;
+	}
+
+	public void setArgs(Object[] args) {
+		this.args = args;
+	}
 	
-	public TowerType(Main m){
-		this.m = m;
-		
-		setImage( this.m.createImage(m.getGame().getTileWidth(),m.getGame().getTileWidth()) );
-		setProjectileImage( this.m.createImage(m.getGame().getTileWidth()/5,m.getGame().getTileWidth()/5) );
-		setRange(0);
-		setDamage(0);
-		setAttackSpeed(0);
-		setProjectileSpeed(0);
-		setProjectileImage(null);
+	public void newArg(Object o){
+		args[maxArgs]=o;
+		maxArgs++;
 	}
-
-	public Image getImage() {
-		return image;
-	}
-
-	public void setImage(Image image) {
-		this.image = image;
-	}
-
-	public double getRange() {
-		return range;
-	}
-
-	public void setRange(double range) {
-		this.range = range;
-	}
-
-	public double getDamage() {
-		return damage;
-	}
-
-	public void setDamage(double damage) {
-		this.damage = damage;
-	}
-
-	public double getAttackSpeed() {
-		return attackSpeed;
-	}
-
-	public void setAttackSpeed(double attackSpeed) {
-		this.attackSpeed = attackSpeed;
-	}
-
-	public Image getProjectileImage() {
-		return projectileImage;
-	}
-
-	public void setProjectileImage(Image projectileImage) {
-		this.projectileImage = projectileImage;
-	}
-
-	public double getProjectileSpeed() {
-		return projectileSpeed;
-	}
-
-	public void setProjectileSpeed(double projectileSpeed) {
-		this.projectileSpeed = projectileSpeed;
-	}
+	
 }

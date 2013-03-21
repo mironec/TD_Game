@@ -21,7 +21,7 @@ public abstract class Event {
 		
 		if(time<=0){
 			run(); repeat--;
-			if(repeat != 0){time = delay+time;}
+			if(repeat != 0){time = delay;}//+time;}
 			else{m.destroyEvent(this);}
 		}
 	}

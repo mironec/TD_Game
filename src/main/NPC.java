@@ -1,7 +1,7 @@
 package main;
 
-import java.awt.Image;
 import java.awt.Point;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 public class NPC {
@@ -11,50 +11,148 @@ public class NPC {
 	private int tileX;
 	private int tileY;
 	private int wait; //in ms
-	private Image image;
-	private Main m;
-	private NPCType npcType;
+	protected Main m;
 	private int command;
 	public static final int COMMAND_NOTHING=0;
 	public static final int COMMAND_MOVE=1;
+	
+	public static final int ANIMATION_DEATH=0;
+	public int getOrientation() {
+		return orientation;
+	}
+
+	public void setOrientation(int orientation) {
+		this.orientation = orientation;
+	}
+
+	public static final int ANIMATION_STAND=1;
+	public static final int ANIMATION_WALK=2;
+	private BufferedImage animationDeath;
+	private BufferedImage animationStand;
+	private BufferedImage animationWalk;
+	private int animation;
+	private int animationTime;
+	private int animationDeathDuration;			//in ms
+	private int animationStandDuration;			//in ms
+	private int animationWalkDuration;			//in ms
+	
 	private int targetX;
 	private int targetY;
 	private ArrayList<Point> path;
 	private int pathIndex=-1;
 	private int health;
+	private int maxHealth;
 	private double movementSpeed; //tiles per second
 	private NPC previous;
 	private NPC next;
+	private Sprite sprite;
+	private NPCType NPCType;
+	private int orientation = ORIENTATION_EAST;
+	public final static int ORIENTATION_EAST = 0;
+	public final static int ORIENTATION_NORTH = 1;
+	public final static int ORIENTATION_WEST = 2;
+	public final static int ORIENTATION_SOUTH = 3;
+	private boolean untargetable;
 	
-	public NPC (Main m, double x, double y, NPCType npcType){
+	public NPC (Main m, double x, double y, NPCType NPCType){
 		setX(x);
 		setY(y);
 		this.m = m;
-		this.npcType = npcType;
+		this.NPCType = NPCType;
 		
 		//DEFAULT
 		
+		setAnimation(ANIMATION_STAND);
+		setAnimationTime(0);
+		setAnimationDeath(null);
+		setAnimationStand(null);
+		setAnimationWalk(null);
+		setAnimationDeathDuration(0);
+		setAnimationStandDuration(0);
+		setAnimationWalkDuration(0);
 		setWait(0);
-		setImage(null);
 		setCommand(COMMAND_NOTHING);
 		setTargetX(getTileX());
 		setTargetY(getTileY());
 		setHealth(1);
 		setMovementSpeed(1);
+		setUntargetable(false);
+		
+		m.getGame().setNumberNPC(m.getGame().getNumberNPC()+1);
 	}
-
-	public Image getImage() {
-		if(image==null)
-			return getNpcType().getImage();
-		else
-			return image;
+	
+	public void copyFromNPC(NPC npc){
+		setAnimationDeath(npc.getAnimationDeath());
+		setAnimationDeathDuration(npc.getAnimationDeathDuration());
+		setAnimationStand(npc.getAnimationStand());
+		setAnimationStandDuration(npc.getAnimationStandDuration());
+		setAnimationWalk(npc.getAnimationWalk());
+		setAnimationWalkDuration(npc.getAnimationWalkDuration());
+		setMaxHealth(npc.getMaxHealth());
+		setMovementSpeed(npc.getMovementSpeed());
+		setUntargetable(npc.isUntargetable());
+		//////////////////////////////////////////////////////////
+		setAnimation(ANIMATION_STAND);
+		setAnimationTime(0);
+		setCommand(COMMAND_NOTHING);
+		setHealth(getMaxHealth());
+		setTargetX(0);
+		setTargetY(0);
+		setWait(0);
+	}
+	
+	public void logic (int delta) {
+		additionalLogic(delta);
+		if(getCommand()==NPC.COMMAND_MOVE){
+			goToTarget(delta);
+		}
+	}
+	
+	public void additionalLogic (int delta) {
+		
+	}
+	
+	public void drawLogic (int delta) {
+		int duration = getAnimationStandDuration();
+		BufferedImage animation = getAnimationStand();
+		
+		if(getAnimation() == ANIMATION_WALK){
+			duration = getAnimationWalkDuration();
+			animation = getAnimationWalk();
+		}
+		
+		setAnimationTime( (getAnimationTime()+delta) % duration );
+		int phase = (int) ( (double)getAnimationTime() / (double)duration * (double)Animation.getImagePhases(animation) );
+		if(getSprite()==null){
+			Sprite s = new Sprite(m, (int)getX(), (int)getY(), Game.rotate(Animation.getImagePhase(animation,phase,m),orientation*90), this, false);
+			m.getGame().setNewSprite(s);
+			setSprite(s);
+		}
+		else{
+			if((getSprite().getX()==getX()&&
+			   getSprite().getY()==getY()&&
+			   getSprite().getImage()==Animation.getImagePhase(animation, phase, m)) )
+			{}
+			else{
+				m.getGame().destroySprite(getSprite());
+				Sprite s = new Sprite(m, (int)getX(), (int)getY(), Game.rotate(Animation.getImagePhase(animation,phase,m),orientation*90), this, false);
+				m.getGame().setNewSprite(s);
+				setSprite(s);
+			}
+		}
 	}
 	
 	public void damage(double damage){
 		health-=damage;
 		if(health<=0){
-			m.getGame().destroyNPC(this);
+			die();
 		}
+	}
+	
+	public void die(){
+		m.getGame().destroySprite(getSprite());
+		m.getGame().destroyNPC(this);
+		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), Game.rotate(getAnimationDeath(),orientation*90), this, false, getAnimationDeathDuration()));
 	}
 	
 	public ArrayList<Point> findPath(int x, int y, ArrayList<Point> beenTo, ArrayList<Point> path, int tx, int ty) {
@@ -128,25 +226,28 @@ public class NPC {
 		return new ArrayList<Point>();
 	}
 	
-	public void goAlongPath(ArrayList<Point> path){
-		
-	}
-	
 	public void goToTarget(int delta) {
 		if(path==null||path.isEmpty()){
 			path = findPath(tileX, tileY, new ArrayList<Point>(),new ArrayList<Point>(), targetX, targetY);
-			pathIndex=0;
+			pathIndex=1;
 		}
 		else{
 			for(int loop=0;loop<delta;loop++){
 				if(wait==0){
+					setAnimation(ANIMATION_WALK);
 					if(tileX==targetX&&tileY==targetY){
 						command = COMMAND_NOTHING;
+						setAnimation(ANIMATION_STAND);
 						return;
 					}
 					
 					x=tileX*m.getGame().getTileWidth();
 					y=tileY*m.getGame().getTileWidth();
+					
+					if(tileX<path.get(pathIndex).x){orientation = ORIENTATION_EAST;}
+					if(tileY>path.get(pathIndex).y){orientation = ORIENTATION_NORTH;}
+					if(tileX>path.get(pathIndex).x){orientation = ORIENTATION_WEST;}
+					if(tileY<path.get(pathIndex).y){orientation = ORIENTATION_SOUTH;}
 					
 					tileX = path.get(pathIndex).x;
 					tileY = path.get(pathIndex).y;
@@ -174,10 +275,6 @@ public class NPC {
 				}
 			}
 		}
-	}
-	
-	public void setImage(Image img) {
-		this.image = img;
 	}
 
 	public double getX() {
@@ -266,14 +363,6 @@ public class NPC {
 		this.movementSpeed = movementSpeed;
 	}
 
-	public NPCType getNpcType() {
-		return npcType;
-	}
-
-	public void setNpcType(NPCType npcType) {
-		this.npcType = npcType;
-	}
-
 	public NPC getPrevious() {
 		return previous;
 	}
@@ -288,5 +377,102 @@ public class NPC {
 
 	public void setNext(NPC next) {
 		this.next = next;
+	}
+
+	public BufferedImage getAnimationDeath() {
+		return animationDeath;
+	}
+
+	public void setAnimationDeath(BufferedImage animationDeath) {
+		this.animationDeath = animationDeath;
+	}
+
+	public BufferedImage getAnimationStand() {
+		return animationStand;
+	}
+
+	public void setAnimationStand(BufferedImage animationStand) {
+		this.animationStand = animationStand;
+	}
+
+	public BufferedImage getAnimationWalk() {
+		return animationWalk;
+	}
+
+	public void setAnimationWalk(BufferedImage animationWalk) {
+		this.animationWalk = animationWalk;
+	}
+
+	public int getAnimation() {
+		return animation;
+	}
+
+	public void setAnimation(int animation) {
+		if(animation != this.animation){setAnimationTime(0);}
+		this.animation = animation;
+	}
+
+	public int getAnimationTime() {
+		return animationTime;
+	}
+
+	public void setAnimationTime(int animationTime) {
+		this.animationTime = animationTime;
+	}
+
+	public Sprite getSprite() {
+		return sprite;
+	}
+
+	public void setSprite(Sprite sprite) {
+		this.sprite = sprite;
+	}
+
+	public int getAnimationDeathDuration() {
+		return animationDeathDuration;
+	}
+
+	public void setAnimationDeathDuration(int animationDeathDuration) {
+		this.animationDeathDuration = animationDeathDuration;
+	}
+
+	public int getAnimationStandDuration() {
+		return animationStandDuration;
+	}
+
+	public void setAnimationStandDuration(int animationStandDuration) {
+		this.animationStandDuration = animationStandDuration;
+	}
+
+	public int getAnimationWalkDuration() {
+		return animationWalkDuration;
+	}
+
+	public void setAnimationWalkDuration(int animationWalkDuration) {
+		this.animationWalkDuration = animationWalkDuration;
+	}
+
+	public int getMaxHealth() {
+		return maxHealth;
+	}
+
+	public void setMaxHealth(int maxHealth) {
+		this.maxHealth = maxHealth;
+	}
+
+	public NPCType getNPCType() {
+		return NPCType;
+	}
+
+	public void setNPCType(NPCType nPCType) {
+		NPCType = nPCType;
+	}
+
+	public boolean isUntargetable() {
+		return untargetable;
+	}
+
+	public void setUntargetable(boolean untargetable) {
+		this.untargetable = untargetable;
 	}
 }

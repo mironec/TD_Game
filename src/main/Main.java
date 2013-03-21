@@ -3,26 +3,26 @@ package main;
 import java.applet.Applet;
 import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferedImage;
 
 public class Main extends Applet implements Runnable, KeyListener, MouseListener, MouseMotionListener {
 	
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 13L;
+	private static final long serialVersionUID = 15L;
 	
 	public static final int RENDER_MODE_MENU = 0;
 	public static final int RENDER_MODE_GAME = 1;
 	
 	public int width, height = 1;
-	Image backbuffer;
+	BufferedImage backbuffer;
 	Graphics backbufferG;
 	Thread mainThread, fpsThread;
 	int fps, frames = 0;
@@ -34,7 +34,10 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	Point mousePoint;
 	Point mouseStart;
 	Point mouseEnd;
-	float keySensitivity = 0.25F;
+	double keySensitivity = 0.25D;
+	int elapsedTime = 0;
+	int elapsedTime2 = 0;
+	int interiorDelta = 0;
 	
 	private Game game;
 
@@ -47,7 +50,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		width = this.getWidth();
 		height = this.getHeight();
 		
-		backbuffer = createImage(width,height);
+		backbuffer = new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
 		backbufferG = backbuffer.getGraphics();
 		mainThread = new Thread(this);
 		fpsThread = new Thread(this);
@@ -57,7 +60,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		this.addKeyListener(this);
 		this.addMouseListener(this);
 		this.addMouseMotionListener(this);
-		lastDelta = System.currentTimeMillis();
+		lastDelta = System.nanoTime()/1000000;
 		delta = 0;
 		
 		game = new Game(this);
@@ -84,13 +87,15 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	   update( g );
 	}
 	
-	public void paintbb(){
+	public void paintbb(int delta){
 		if(!atWork){
+			delta = interiorDelta + delta;
+			interiorDelta = 0;
 			atWork = true;
 			if(renderMode==RENDER_MODE_GAME){
 				frames++;
 				
-				game.render();
+				game.render(delta);
 				
 				backbufferG.setColor(Color.white);
 				backbufferG.drawString("FPS: " + fps, 10, 10);
@@ -106,22 +111,30 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 			
 			repaint();
 		}
+		else{
+			interiorDelta += delta;
+		}
 	}
 
 	@SuppressWarnings("static-access")
 	public void run() {
 		while(true){
 			if(Thread.currentThread()==mainThread){
-				int delta = (int) (System.currentTimeMillis() - lastDelta);
-				lastDelta = System.currentTimeMillis();
+				int delta = (int) (System.nanoTime()/1000000 - lastDelta);
+				lastDelta = System.nanoTime()/1000000;
 				
-				paintbb();
+				//System.out.println(delta);
+				//elapsedTime+=delta;
+				
+				paintbb(delta);
 				handleInput(delta);
 				logic(delta);
 				events(delta);
-				try {mainThread.sleep(5);} catch (InterruptedException e) {e.printStackTrace();}
+				//try {mainThread.sleep(10);} catch (InterruptedException e) {e.printStackTrace();}
 			}
 			if(Thread.currentThread()==fpsThread){
+				//elapsedTime2+=1;
+				
 				fps=frames;
 				frames=0;
 				cas++;
