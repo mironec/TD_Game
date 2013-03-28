@@ -19,6 +19,7 @@ public class Projectile {
 	private Projectile previous;
 	private Projectile next;
 	private Sprite sprite;
+	private int orientation = 0;
 	
 	
 	private Projectile(Main m, double x, double y, Tower tower){
@@ -55,6 +56,9 @@ public class Projectile {
 			double distance = Math.pow( Math.pow(getX() - npc.getX(),2) + Math.pow(getY() - npc.getY(),2), 0.5D);
 			double newDist = distance - getSpeed()*m.getGame().getTileWidth()*delta/1000D;
 			double doDist = getSpeed()*m.getGame().getTileWidth()*delta/1000D;
+			orientation = (int) Math.toDegrees(Math.acos( (npc.getX() - getX()) / Math.pow(Math.pow(npc.getX() - getX(), 2) + Math.pow(npc.getY()-getY(), 2), 0.5) ));
+			//System.out.println((npc.getX() - getX()) / Math.pow(Math.pow(npc.getX() - getX(), 2) + Math.pow(npc.getY()-getY(), 2), 0.5));
+			orientation = 90;
 			
 			if(newDist <= 0){
 				setX(npc.getX());
@@ -76,6 +80,7 @@ public class Projectile {
 			double distance = Math.pow( Math.pow(getX() - getTargetX(),2) + Math.pow(getY() - getTargetY(),2), 0.5D);
 			double newDist = distance - getSpeed()*m.getGame().getTileWidth()*delta/1000D;
 			double doDist = getSpeed()*m.getGame().getTileWidth()*delta/1000D;
+			orientation = (int) Math.toDegrees(Math.acos( (getTargetX() - getX()) / Math.pow(Math.pow(getTargetX() - getX(), 2) + Math.pow(getTargetY()-getY(), 2), 0.5) ));
 			
 			if(newDist <= 0){
 				setX(getTargetX());
@@ -95,15 +100,18 @@ public class Projectile {
 	}
 	
 	public void drawLogic (int delta) {
+		setAnimationTime( (getAnimationTime() + delta) % getAnimationStandDuration() );
+		int phase = (int) ( (double)getAnimationTime() / (double)getAnimationStandDuration() * (double)Animation.getImagePhases(getAnimationStand()) );
+		BufferedImage img = Game.rotate(Animation.getImagePhase(getAnimationStand(),phase,m), orientation);
+		//System.out.println(orientation);
+		
 		if(getSprite() != null &&
 		   (getSprite().getX()==getX()&&
 		   getSprite().getY()==getY()&&
-		   getSprite().getImage()==getAnimationStand() ) ){}
+		   getSprite().getImage()==img ) ){}
 		else{
 			if(getSprite()!=null){m.getGame().destroySprite(getSprite());}
-			setAnimationTime( (getAnimationTime() + delta) % getAnimationStandDuration() );
-			int phase = (int) ( (double)getAnimationTime() / (double)getAnimationStandDuration() * (double)Animation.getImagePhases(getAnimationStand()) );
-			Sprite s =  new Sprite(m, (int)getX(), (int)getY(), Animation.getImagePhase(getAnimationStand(),phase,m), this, true);
+			Sprite s =  new Sprite(m, (int)getX(), (int)getY(), img, this, true);
 			m.getGame().setNewSprite( s );
 			setSprite(s);
 		}

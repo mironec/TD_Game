@@ -44,6 +44,7 @@ public class Game {
 	private TowerType lastTowerType;
 	private NPCType lastNPCType;
 	private Animation lastAnimation;
+	private Button lastButton;
 	
 	public Game (Main m) {
 		tiles = new BufferedImage[maxTiles+1];
@@ -65,23 +66,32 @@ public class Game {
 		
 		resizeImages();
 		
-		Event e = new Event(m,1000,1){
+		Event e = new Event(m,200,50){
 			public void run() {
 				NPC npc = createNPC(findNPCTypeById(1));
-				//npc.copyFromNPC(getLastNPCType());
-				//setNewNPC(npc);
 				npc.issueMoveCommand(19,19);
 			}
 		};
+		
+		Button b = new Button(m, 10, 10, 50, 50, findTowerTypeById(1).getAnimationStand()) {
+			public void run() {
+				Tower t = createTower(findTowerTypeById(1));
+				t.setX(3*getTileWidth());
+				t.setY(2*getTileWidth());
+			}
+		}; 
+		setNewButton(b);
 		
 		Tower t = createTower(findTowerTypeById(1));
 		t.setX(2*getTileWidth());
 		t.setY(2*getTileWidth());
 		
-		//System.out.println();
-		
 		m.setNewEvent(e);
 		
+		
+	}
+	
+	public void selectTower(){
 		
 	}
 	
@@ -138,7 +148,7 @@ public class Game {
 	public static BufferedImage rotate(BufferedImage img, int amnout){
 		BufferedImage ret = new BufferedImage(img.getWidth(),img.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		AffineTransform at = new AffineTransform();
-		at.rotate(-Math.PI/180.0D*(double)(amnout-90),img.getWidth()/2,img.getHeight()/2);
+		at.rotate(-Math.PI/180.0D*(double)(amnout),img.getWidth()/2,img.getHeight()/2);
 		Graphics2D g2d = (Graphics2D) ret.getGraphics();
         g2d.drawImage(img, at, null);
 		return ret;
@@ -418,7 +428,9 @@ public class Game {
 		}
 		
 		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
-			s.draw(g, (int)offsetXF, (int)offsetYF);
+			if( ! (s.getOwner() instanceof Button) ){
+				s.draw(g, (int)offsetXF, (int)offsetYF);
+			}
 		}
 		
 		for( Animation a = getLastAnimation(); a != null; a = a.getPrevious() ){
@@ -463,6 +475,17 @@ public class Game {
 		g.setColor(Color.darkGray);
 		g.fillRect(m.width-panelWidth, 0, panelWidth, m.height);
 		g.fillRect(0, m.height-panelHeight, m.width, panelHeight);
+		
+		for(Button b = getLastButton();b!=null;b=b.getPrevious()){
+			b.drawLogic();
+		}
+		
+		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+			if( s.getOwner() instanceof Button ){
+				/*System.out.println("j");*/
+				s.draw(g, -m.width+panelWidth, -m.height+panelHeight);
+			}
+		}
 	}
 	
 	public void renderMiniMap(int delta){
@@ -527,6 +550,10 @@ public class Game {
 						*(m.height/(double)(panelWidth-marginMinimap*2)); //How many times bigger is the main screen than the minimap
 				if(offsetYF>=maxOffsetY){offsetYF=maxOffsetY;}
 				if(offsetYF<=0){offsetYF=0;}
+			}
+			
+			for(Button b = getLastButton();b!=null;b=b.getPrevious()){
+				b.click(m.mousePoint.x, m.mousePoint.y);
 			}
 		}
 		
@@ -809,5 +836,45 @@ public class Game {
 		npc.copyFromNPC(npcType);
 		
 		return npc;
+	}
+	
+	public void destroyButton(Button b){
+		if(getLastButton().equals(b)){
+			setLastButton(b.getPrevious());
+		}
+		if(b.getPrevious()!=null){b.getPrevious().setNext(b.getNext());}
+		if(b.getNext()!=null){b.getNext().setPrevious(b.getPrevious());}
+	}
+	
+	public void setNewButton(Button b){
+		if(getLastButton()!=null){
+			getLastButton().setNext(b);
+			b.setPrevious(getLastButton());
+		}
+		setLastButton(b);
+	}
+
+	public Button getLastButton() {
+		return lastButton;
+	}
+
+	public void setLastButton(Button lastButton) {
+		this.lastButton = lastButton;
+	}
+	
+	public int getPanelWidth() {
+		return panelWidth;
+	}
+
+	public void setPanelWidth(int panelWidth) {
+		this.panelWidth = panelWidth;
+	}
+
+	public int getPanelHeight() {
+		return panelHeight;
+	}
+
+	public void setPanelHeight(int panelHeight) {
+		this.panelHeight = panelHeight;
 	}
 }
