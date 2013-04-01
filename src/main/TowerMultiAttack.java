@@ -13,6 +13,7 @@ public class TowerMultiAttack extends Tower{
 		NPC targets [] = getClosestNPC(maxTargets);
 		
 		setAAcd(1.0D/getAttackSpeed());
+		setAnimation(ANIMATION_ATTACK);
 		
 		for(int loop=0;loop<targets.length;loop++){
 			if(targets[loop]==null){continue;}

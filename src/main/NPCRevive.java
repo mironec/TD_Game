@@ -29,8 +29,8 @@ public class NPCRevive extends NPC{
 	public void die(){
 		if(died){
 			m.getGame().destroySprite(getSprite());
-			m.getGame().destroyNPC(this);
 			m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), Game.rotate(getAnimationDeath(),getOrientation()*90), this, false, getAnimationDeathDuration()));
+			m.getGame().destroyNPC(this);
 		}
 		else{
 			setUntargetable(true);

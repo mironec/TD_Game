@@ -56,17 +56,27 @@ public class Projectile {
 			double distance = Math.pow( Math.pow(getX() - npc.getX(),2) + Math.pow(getY() - npc.getY(),2), 0.5D);
 			double newDist = distance - getSpeed()*m.getGame().getTileWidth()*delta/1000D;
 			double doDist = getSpeed()*m.getGame().getTileWidth()*delta/1000D;
-			orientation = (int) Math.toDegrees(Math.acos( (npc.getX() - getX()) / Math.pow(Math.pow(npc.getX() - getX(), 2) + Math.pow(npc.getY()-getY(), 2), 0.5) ));
-			//System.out.println((npc.getX() - getX()) / Math.pow(Math.pow(npc.getX() - getX(), 2) + Math.pow(npc.getY()-getY(), 2), 0.5));
-			orientation = 90;
+			if(npc.getY() - getY() > 0){
+				orientation = -(int) Math.toDegrees(Math.acos( (npc.getX() - getX()) / Math.pow(Math.pow(npc.getX() - getX(), 2) + Math.pow(npc.getY()-getY(), 2), 0.5) ));
+			}
+			if(npc.getY() - getY() == 0){
+				if(npc.getX() - getX() < 0){orientation=180;}
+				if(npc.getX() - getX() > 0){orientation=0;}
+			}
+			if(npc.getY() - getY() < 0){
+				orientation = (int) Math.toDegrees(Math.acos( (npc.getX() - getX()) / Math.pow(Math.pow(npc.getX() - getX(), 2) + Math.pow(npc.getY()-getY(), 2), 0.5) ));
+			}
+			//orientation = 90;
 			
 			if(newDist <= 0){
 				setX(npc.getX());
 				setY(npc.getY());
-				m.getGame().destroySprite(getSprite());
-				m.getGame().destroyProjectile(this);
+				if(getSprite()!=null)
+					m.getGame().destroySprite(getSprite());
 				m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()));
-				npc.damage(getTower().getDamage());
+				m.getGame().destroyProjectile(this);
+				if(!npc.isUntargetable())
+					npc.damage(getTower().getDamage());
 			}
 			else{
 				double newX = getX()+((npc.getX()-getX())*doDist/distance);
@@ -80,14 +90,24 @@ public class Projectile {
 			double distance = Math.pow( Math.pow(getX() - getTargetX(),2) + Math.pow(getY() - getTargetY(),2), 0.5D);
 			double newDist = distance - getSpeed()*m.getGame().getTileWidth()*delta/1000D;
 			double doDist = getSpeed()*m.getGame().getTileWidth()*delta/1000D;
-			orientation = (int) Math.toDegrees(Math.acos( (getTargetX() - getX()) / Math.pow(Math.pow(getTargetX() - getX(), 2) + Math.pow(getTargetY()-getY(), 2), 0.5) ));
+			if(getTargetY() - getY() > 0){
+				orientation = -(int) Math.toDegrees(Math.acos( (getTargetX() - getX()) / Math.pow(Math.pow(getTargetX() - getX(), 2) + Math.pow(getTargetY()-getY(), 2), 0.5) ));
+			}
+			if(getTargetY() - getY() == 0){
+				if(getTargetX() - getX() < 0){orientation=180;}
+				if(getTargetX() - getX() > 0){orientation=0;}
+			}
+			if(getTargetY() - getY() < 0){
+				orientation = (int) Math.toDegrees(Math.acos( (getTargetX() - getX()) / Math.pow(Math.pow(getTargetX() - getX(), 2) + Math.pow(getTargetY()-getY(), 2), 0.5) ));
+			}
 			
 			if(newDist <= 0){
 				setX(getTargetX());
 				setY(getTargetY());
-				m.getGame().destroySprite(getSprite());
-				m.getGame().destroyProjectile(this);
+				if(getSprite()!=null)
+					m.getGame().destroySprite(getSprite());
 				m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()));
+				m.getGame().destroyProjectile(this);
 				tower.damageGround(this);
 			}
 			else{
@@ -103,6 +123,7 @@ public class Projectile {
 		setAnimationTime( (getAnimationTime() + delta) % getAnimationStandDuration() );
 		int phase = (int) ( (double)getAnimationTime() / (double)getAnimationStandDuration() * (double)Animation.getImagePhases(getAnimationStand()) );
 		BufferedImage img = Game.rotate(Animation.getImagePhase(getAnimationStand(),phase,m), orientation);
+		//BufferedImage img = Animation.getImagePhase(getAnimationStand(),phase,m);
 		//System.out.println(orientation);
 		
 		if(getSprite() != null &&

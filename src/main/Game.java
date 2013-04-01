@@ -15,7 +15,7 @@ import javax.imageio.ImageIO;
 
 public class Game {
 	
-	private int tileWidth = 30;
+	private int tileWidth = 40;
 	private BufferedImage tiles[];
 	private int maxTiles = 1;
 	private BufferedImage black;
@@ -46,6 +46,15 @@ public class Game {
 	private Animation lastAnimation;
 	private Button lastButton;
 	
+	private boolean towerSelected;
+	private Sprite towerSelectedSprite;
+	private int towerSelectedX, towerSelectedY;
+	private BufferedImage towerSelectedImage;
+	private TowerType towerSelectedTowerType;
+	
+	private int money = 30;
+	private String status = "";
+	
 	public Game (Main m) {
 		tiles = new BufferedImage[maxTiles+1];
 		black = new BufferedImage(tileWidth, tileWidth, BufferedImage.TYPE_INT_ARGB);
@@ -55,6 +64,9 @@ public class Game {
 		g.dispose();
 		maxOffsetX=1;
 		maxOffsetY=1;
+		towerSelected = false;
+		towerSelectedSprite = null;
+		
 		this.m=m;
 		currentMap = new Map(m);
 	}
@@ -63,6 +75,7 @@ public class Game {
 		loadMapTiles();
 		loadTowerTypes();
 		loadNPCTypes();
+		prepareButtons();
 		
 		resizeImages();
 		
@@ -73,26 +86,61 @@ public class Game {
 			}
 		};
 		
-		Button b = new Button(m, 10, 10, 50, 50, findTowerTypeById(1).getAnimationStand()) {
-			public void run() {
-				Tower t = createTower(findTowerTypeById(1));
-				t.setX(3*getTileWidth());
-				t.setY(2*getTileWidth());
-			}
-		}; 
-		setNewButton(b);
-		
-		Tower t = createTower(findTowerTypeById(1));
-		t.setX(2*getTileWidth());
-		t.setY(2*getTileWidth());
-		
 		m.setNewEvent(e);
 		
 		
 	}
 	
-	public void selectTower(){
+	public void prepareButtons(){
+		int posX = getMarginMinimap()*2;
+		int posY = getMarginMinimap()*2;
 		
+		for(TowerType t = getLastTowerType();t!=null;t=t.getPrevious()){
+			if(t.getBase() == null){									//The Tower is not an upgrade from another Tower
+				final int id = t.getId();
+				Button b = new Button(m, posX, posY, getPanelWidth()/4, getPanelWidth()/4,
+						resize(Animation.getImagePhase(t.getAnimationStand(), 0, m),getPanelWidth()/4,getPanelWidth()/4) ) {
+					public void run() {
+						selectTower( findTowerTypeById(id) );
+					}
+				}; 
+				setNewButton(b);
+				
+				posX += getPanelWidth()/4 + getMarginMinimap();
+				if(posX>=getPanelWidth()){
+					posX = getMarginMinimap()*2;
+					posY += getPanelWidth()/4 + getMarginMinimap();
+				}
+			}
+		}
+	}
+	
+	public void selectTower(TowerType towerType){
+		if(isTowerSelected()){
+			deselectTower(true);
+		}
+		if( getMoney() >= towerType.getCost() ){
+			setMoney(getMoney()-towerType.getCost());
+			setTowerSelected(true);
+			setTowerSelectedImage(Animation.getImagePhase(towerType.getAnimationStand(), 0, m));
+			setTowerSelectedTowerType(towerType);
+		}
+		else{
+			setStatus("Not enough money!");
+			m.setNewEvent(new Event(m, 2000, 1) {
+				public void run() {
+					setStatus("","Not enough money!");
+				}
+			});
+		}
+	}
+	
+	public void deselectTower(boolean refund){
+		if(refund)
+			setMoney(getMoney()+getTowerSelectedTowerType().getCost());
+		setTowerSelected(false);
+		destroySprite(getTowerSelectedSprite());
+		setTowerSelectedImage(null);
 	}
 	
 	public void resizeImages(){
@@ -151,6 +199,7 @@ public class Game {
 		at.rotate(-Math.PI/180.0D*(double)(amnout),img.getWidth()/2,img.getHeight()/2);
 		Graphics2D g2d = (Graphics2D) ret.getGraphics();
         g2d.drawImage(img, at, null);
+        g2d.dispose();
 		return ret;
 	}
 	
@@ -251,6 +300,12 @@ public class Game {
 				value = key.substring(find.length(), key.indexOf(";"));
 				t.setBase( findTowerTypeById(Integer.parseInt(value)) ); }
 				////////////////////////////////////////////////////////
+				find = "cost=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				t.setCost( Integer.parseInt(value) ); }
+				////////////////////////////////////////////////////////
 				find = "maxTargets=";
 				if(s.contains(find)){
 				key = s.substring( s.lastIndexOf(find) );
@@ -344,6 +399,29 @@ public class Game {
 		logicNPCs(delta);
 		logicTowers(delta);
 		logicProjectiles(delta);
+		logicOther(delta);
+	}
+	
+	public boolean isCursorInPlayingField () {
+		return m.mousePoint.x > 0 && m.mousePoint.x < m.width-getPanelWidth() && m.mousePoint.y > 0 && m.mousePoint.y < m.height-getPanelHeight();
+	}
+	
+	public void logicOther(int delta){
+		if( isTowerSelected() ){
+			if(getTowerSelectedSprite() != null){
+				destroySprite(getTowerSelectedSprite());
+			}
+			BufferedImage img = getTowerSelectedImage();
+			if(isCursorInPlayingField()){
+				setTowerSelectedX((int)Math.floor( (m.mousePoint.x + offsetXF) / getTileWidth() ));
+				setTowerSelectedY((int)Math.floor( (m.mousePoint.y + offsetYF) / getTileWidth() ));
+				setTowerSelectedSprite(new Sprite(m, getTowerSelectedX()*getTileWidth()-(int)offsetXF, getTowerSelectedY()*getTileWidth()-(int)offsetYF, img, this, false));
+			}
+			else{
+				setTowerSelectedSprite(new Sprite(m, m.mousePoint.x-img.getWidth()/2, m.mousePoint.y-img.getHeight()/2, img, this, false));
+			}
+			setNewSprite(getTowerSelectedSprite());
+		}
 	}
 	
 	public void logicNPCs(int delta){
@@ -412,6 +490,7 @@ public class Game {
 		renderObjects(delta);
 		renderOverlay(delta);
 		renderMiniMap(delta);
+		renderAboveAll(delta);
 	}
 	
 	public void renderObjects(int delta){
@@ -428,13 +507,24 @@ public class Game {
 		}
 		
 		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
-			if( ! (s.getOwner() instanceof Button) ){
+			if( ! (s.getOwner() instanceof Button) &&
+				! (s.getOwner() instanceof Game) ){
 				s.draw(g, (int)offsetXF, (int)offsetYF);
 			}
 		}
 		
 		for( Animation a = getLastAnimation(); a != null; a = a.getPrevious() ){
 			a.draw(g, (int)offsetXF, (int)offsetYF, delta);
+		}
+	}
+	
+	public void renderAboveAll(int delta){
+		Graphics g = m.backbufferG;
+		
+		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+			if( s.getOwner() instanceof Game ){
+				s.draw(g, 0, 0);
+			}
 		}
 	}
 	
@@ -476,14 +566,17 @@ public class Game {
 		g.fillRect(m.width-panelWidth, 0, panelWidth, m.height);
 		g.fillRect(0, m.height-panelHeight, m.width, panelHeight);
 		
+		g.setColor(Color.white);
+		g.drawString("Money: " + money, m.width-panelWidth, panelWidth+getMarginMinimap()*2);
+		g.drawString(getStatus(), marginMinimap*2, m.height-marginMinimap*4);
+		
 		for(Button b = getLastButton();b!=null;b=b.getPrevious()){
 			b.drawLogic();
 		}
 		
 		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
 			if( s.getOwner() instanceof Button ){
-				/*System.out.println("j");*/
-				s.draw(g, -m.width+panelWidth, -m.height+panelHeight);
+				s.draw(g, -m.width+panelWidth, -panelWidth-getMarginMinimap()*3);
 			}
 		}
 	}
@@ -507,13 +600,13 @@ public class Game {
 			g.fillRect( (int)(tower.getX()), (int)(tower.getY()), getTileWidth(), getTileWidth() );
 		}
 		
-		m.backbufferG.drawImage(minimap, m.width-panelWidth+marginMinimap, marginMinimap, m.width-marginMinimap, panelWidth-marginMinimap,
+		m.backbufferG.drawImage(minimap, m.width-panelWidth+getMarginMinimap(), getMarginMinimap(), m.width-getMarginMinimap(), panelWidth-getMarginMinimap(),
 				0, 0, mapGraphicWidth, mapGraphicHeight, m);
 		m.backbufferG.setColor(Color.white);
-		int minimapWidth = panelWidth-marginMinimap*2;
+		int minimapWidth = panelWidth-getMarginMinimap()*2;
 		double modifierX = (double)minimapWidth/mapGraphicWidth;
 		double modifierY = (double)minimapWidth/mapGraphicHeight;
-		m.backbufferG.drawRect(m.width - panelWidth + marginMinimap + (int)(offsetXF*modifierX), marginMinimap + (int)(offsetYF*modifierY),(int)((double)(m.width-panelWidth)*modifierX),(int)((double)(m.height-panelHeight)*modifierY));
+		m.backbufferG.drawRect(m.width - panelWidth + getMarginMinimap() + (int)(offsetXF*modifierX), getMarginMinimap() + (int)(offsetYF*modifierY),(int)((double)(m.width-panelWidth)*modifierX),(int)((double)(m.height-panelHeight)*modifierY));
 	}
 	
 	public String printMap(int x, int y){
@@ -534,20 +627,31 @@ public class Game {
 		//2 - Middle Click
 		//3 - Right Click
 		if(m.mouseDown[1]){
-			if(m.mouseStart.x>=m.width-panelWidth+marginMinimap&&
-				m.mouseStart.x<=m.width-marginMinimap&&
-				m.mouseStart.y>=marginMinimap&&
-				m.mouseStart.y<=panelWidth-marginMinimap)
-			{
-				offsetXF = (m.mousePoint.x-m.width+panelWidth-marginMinimap //X relative to the minimap
-						-0.5f*(m.width-panelWidth)/(double)mapGraphicWidth*(panelWidth-marginMinimap*2)) //Drag the center of the minimap square
-						*(m.width/(double)(panelWidth-marginMinimap*2)); //How many times bigger is the main screen than the minimap
+			
+			if(isTowerSelected()){
+				if(isCursorInPlayingField()){
+					deselectTower(false);
+					createTower ( getTowerSelectedTowerType() ).setX(getTowerSelectedX()*getTileWidth()).setY(getTowerSelectedY()*getTileWidth());
+				}
+				else{
+					deselectTower(true);
+				}
+			}
+			
+			if(m.mouseStart.x>=m.width-panelWidth+getMarginMinimap()&&
+				m.mouseStart.x<=m.width-getMarginMinimap()&&
+				m.mouseStart.y>=getMarginMinimap()&&
+				m.mouseStart.y<=panelWidth-getMarginMinimap())
+			{				
+				offsetXF = (m.mousePoint.x-m.width+panelWidth-getMarginMinimap()
+						-0.5f*(m.width-panelWidth)/(double)mapGraphicWidth*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
+						*(mapGraphicWidth/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
 				if(offsetXF>=maxOffsetX){offsetXF=maxOffsetX;}
 				if(offsetXF<=0){offsetXF=0;}
 				
-				offsetYF = (m.mousePoint.y-marginMinimap //Y relative to the minimap
-						-0.5f*(m.height-panelHeight)/(double)mapGraphicHeight*(panelWidth-marginMinimap*2)) //Drag the center of the minimap square
-						*(m.height/(double)(panelWidth-marginMinimap*2)); //How many times bigger is the main screen than the minimap
+				offsetYF = (m.mousePoint.y-getMarginMinimap()
+						-0.5f*(m.height-panelHeight)/(double)mapGraphicHeight*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
+						*(mapGraphicHeight/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
 				if(offsetYF>=maxOffsetY){offsetYF=maxOffsetY;}
 				if(offsetYF<=0){offsetYF=0;}
 			}
@@ -661,6 +765,7 @@ public class Game {
 		}
 		if(s.getPrevious()!=null){s.getPrevious().setNext(s.getNext());}
 		if(s.getNext()!=null){s.getNext().setPrevious(s.getPrevious());}
+		s.setImage(null);
 	}
 	
 	public void setNewTower(Tower t){
@@ -698,6 +803,7 @@ public class Game {
 		}
 		if(a.getPrevious()!=null){a.getPrevious().setNext(a.getNext());}
 		if(a.getNext()!=null){a.getNext().setPrevious(a.getPrevious());}
+		a.setImage(null);
 	}
 
 	public void setNewTowerType(TowerType t){
@@ -876,5 +982,83 @@ public class Game {
 
 	public void setPanelHeight(int panelHeight) {
 		this.panelHeight = panelHeight;
+	}
+
+	public boolean isTowerSelected() {
+		return towerSelected;
+	}
+
+	public void setTowerSelected(boolean towerSelected) {
+		this.towerSelected = towerSelected;
+	}
+
+	public Sprite getTowerSelectedSprite() {
+		return towerSelectedSprite;
+	}
+
+	public void setTowerSelectedSprite(Sprite towerSelectedSprite) {
+		this.towerSelectedSprite = towerSelectedSprite;
+	}
+
+	public BufferedImage getTowerSelectedImage() {
+		return towerSelectedImage;
+	}
+
+	public void setTowerSelectedImage(BufferedImage towerSelectedImage) {
+		this.towerSelectedImage = towerSelectedImage;
+	}
+
+	public int getTowerSelectedX() {
+		return towerSelectedX;
+	}
+
+	public void setTowerSelectedX(int towerSelectedX) {
+		this.towerSelectedX = towerSelectedX;
+	}
+
+	public int getTowerSelectedY() {
+		return towerSelectedY;
+	}
+
+	public void setTowerSelectedY(int towerSelectedY) {
+		this.towerSelectedY = towerSelectedY;
+	}
+
+	public TowerType getTowerSelectedTowerType() {
+		return towerSelectedTowerType;
+	}
+
+	public void setTowerSelectedTowerType(TowerType towerSelectedTowerType) {
+		this.towerSelectedTowerType = towerSelectedTowerType;
+	}
+
+	public int getMoney() {
+		return money;
+	}
+
+	public void setMoney(int money) {
+		this.money = money;
+	}
+
+	public int getMarginMinimap() {
+		return marginMinimap;
+	}
+
+	public void setMarginMinimap(int marginMinimap) {
+		this.marginMinimap = marginMinimap;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status, String oldStatus) {
+		if(getStatus().equals(oldStatus)){
+			this.status = status;
+		}
+	}
+	
+	public void setStatus(String status) {
+		this.status = status;
 	}
 }

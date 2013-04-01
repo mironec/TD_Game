@@ -46,6 +46,8 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	int delta;
 	long lastDelta;
 	
+	long loops = 0;
+	
 	public void init () {
 		width = this.getWidth();
 		height = this.getHeight();
@@ -76,65 +78,58 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 			System.exit(1);
 		}
 		renderMode=RENDER_MODE_GAME;
+		
 	}
 	
 	public void update( Graphics g ) {
-	   g.drawImage( backbuffer, 0, 0, this );
-	   atWork = false;
-	}
+      g.drawImage( backbuffer, 0, 0, this );
+      atWork=false;
+   }
 
-	public void paint( Graphics g ) {
-	   update( g );
-	}
-	
+   public void paint( Graphics g ) {
+      update( g );
+   }
+
 	public void paintbb(int delta){
-		if(!atWork){
-			delta = interiorDelta + delta;
-			interiorDelta = 0;
-			atWork = true;
-			if(renderMode==RENDER_MODE_GAME){
-				frames++;
-				
-				game.render(delta);
-				
-				backbufferG.setColor(Color.white);
-				backbufferG.drawString("FPS: " + fps, 10, 10);
-			}
-			if(renderMode==RENDER_MODE_MENU){
-				frames++;
-				backbufferG.setColor(Color.white);
-				backbufferG.fillRect(0, 0, width, height);
-				
-				backbufferG.setColor(Color.black);
-				backbufferG.drawString("FPS: " + fps, 10, 10);
-			}
+		if(renderMode==RENDER_MODE_GAME){
+			frames++;
 			
-			repaint();
+			game.render(delta);
+			
+			backbufferG.setColor(Color.white);
+			backbufferG.drawString("FPS: " + fps, 10, 10);
 		}
-		else{
-			interiorDelta += delta;
+		if(renderMode==RENDER_MODE_MENU){
+			frames++;
+			backbufferG.setColor(Color.white);
+			backbufferG.fillRect(0, 0, width, height);
+			
+			backbufferG.setColor(Color.black);
+			backbufferG.drawString("FPS: " + fps, 10, 10);
 		}
+		
+		repaint();
 	}
 
 	@SuppressWarnings("static-access")
 	public void run() {
 		while(true){
 			if(Thread.currentThread()==mainThread){
-				int delta = (int) (System.nanoTime()/1000000 - lastDelta);
-				lastDelta = System.nanoTime()/1000000;
 				
-				//System.out.println(delta);
-				//elapsedTime+=delta;
-				
-				paintbb(delta);
-				handleInput(delta);
-				logic(delta);
-				events(delta);
+				if(!atWork){
+					atWork=true;
+					int delta = (int) (System.nanoTime()/1000000 - lastDelta);
+					lastDelta = System.nanoTime()/1000000;
+					
+					handleInput(delta);
+					logic(delta);
+					events(delta);
+					paintbb(delta);
+					
+				}
 				//try {mainThread.sleep(10);} catch (InterruptedException e) {e.printStackTrace();}
 			}
-			if(Thread.currentThread()==fpsThread){
-				//elapsedTime2+=1;
-				
+			if(Thread.currentThread()==fpsThread){				
 				fps=frames;
 				frames=0;
 				cas++;

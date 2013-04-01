@@ -151,8 +151,8 @@ public class NPC {
 	
 	public void die(){
 		m.getGame().destroySprite(getSprite());
-		m.getGame().destroyNPC(this);
 		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), Game.rotate(getAnimationDeath(),orientation*90), this, false, getAnimationDeathDuration()));
+		m.getGame().destroyNPC(this);
 	}
 	
 	public ArrayList<Point> findPath(int x, int y, ArrayList<Point> beenTo, ArrayList<Point> path, int tx, int ty) {

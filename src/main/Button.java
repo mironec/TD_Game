@@ -72,7 +72,7 @@ public abstract class Button {
 	
 	public void click(int x, int y){
 		int offsetX = m.getWidth()-m.getGame().getPanelWidth();
-		int offsetY = m.getHeight()-m.getGame().getPanelHeight();
+		int offsetY = m.getGame().getPanelWidth()+m.getGame().getMarginMinimap()*3;
 		if( x>=getX()+offsetX && x<=getX()+getWidth()+offsetX &&
 			y>=getY()+offsetY && y<=getY()+getHeight()+offsetY ){
 			run();

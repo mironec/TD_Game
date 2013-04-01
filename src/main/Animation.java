@@ -23,8 +23,8 @@ public class Animation {
 		this.m = m;
 		this.x = x;
 		this.y = y;
-		setImage(image);
 		this.owner = owner;
+		setImage(image);
 		this.time = 0;
 		this.duration = duration;
 		this.repeat = repeat;
@@ -34,7 +34,7 @@ public class Animation {
 		int width = img.getWidth();
 		BufferedImage returnImage = new BufferedImage(width,width,BufferedImage.TYPE_INT_ARGB);
 		returnImage.getGraphics().drawImage(img,0,0,width,width,0,width*phase,width,width*(phase+1),m);
-		//returnImage.getGraphics().dispose();
+		returnImage.getGraphics().dispose();
 		
 		return returnImage;
 	}
@@ -75,8 +75,10 @@ public class Animation {
 	}
 
 	public void setImage(BufferedImage image) {
-		maxPhases = (int) Math.ceil( image.getHeight() / image.getWidth() );
-		imageWidth = image.getWidth();
+		if(image!=null){
+			maxPhases = (int) Math.ceil( image.getHeight() / image.getWidth() );
+			imageWidth = image.getWidth();
+		}
 		this.image = image;
 	}
 
