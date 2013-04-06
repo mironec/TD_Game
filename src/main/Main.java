@@ -31,7 +31,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	int cas=0;
 	boolean keyDown[];
 	boolean mouseDown[];
-	Point mousePoint;
+	Point mousePoint = new Point(-1,-1);
 	Point mouseStart;
 	Point mouseEnd;
 	double keySensitivity = 0.25D;
@@ -116,20 +116,21 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		while(true){
 			if(Thread.currentThread()==mainThread){
 				
-				if(!atWork){
-					atWork=true;
+				//if(!atWork){
+					//atWork=true;
 					int delta = (int) (System.nanoTime()/1000000 - lastDelta);
 					lastDelta = System.nanoTime()/1000000;
 					
-					handleInput(delta);
-					logic(delta);
-					events(delta);
-					paintbb(delta);
+					if(delta>0){
+						logic(delta);
+						handleInput(delta);
+						events(delta);
+						paintbb(delta);
+					}
 					
-				}
-				//try {mainThread.sleep(10);} catch (InterruptedException e) {e.printStackTrace();}
+				//}
 			}
-			if(Thread.currentThread()==fpsThread){				
+			if(Thread.currentThread()==fpsThread){
 				fps=frames;
 				frames=0;
 				cas++;

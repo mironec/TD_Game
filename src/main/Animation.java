@@ -15,6 +15,7 @@ public class Animation {
 	private boolean repeat;
 	private int time;			//in ms
 	private int duration;		//in ms
+	private int orientation = 0;
 	
 	private int maxPhases;
 	private int imageWidth;
@@ -51,7 +52,7 @@ public class Animation {
 		BufferedImage img = new BufferedImage( imageWidth, imageWidth, BufferedImage.TYPE_INT_ARGB );
 		img.getGraphics().drawImage(getImage(), 0, 0, imageWidth, imageWidth, 0, imageWidth*phase, imageWidth, imageWidth*(phase+1), m);
 		
-		g.drawImage(img, getX()-offsetX, getY()-offsetY, m);
+		g.drawImage(Game.rotate(img, getOrientation()), getX()-offsetX, getY()-offsetY, m);
 	}
 
 	public int getX() {
@@ -128,6 +129,15 @@ public class Animation {
 
 	public void setDuration(int duration) {
 		this.duration = duration;
+	}
+
+	public int getOrientation() {
+		return orientation;
+	}
+
+	public Animation setOrientation(int orientation) {
+		this.orientation = orientation;
+		return this;
 	}
 
 }

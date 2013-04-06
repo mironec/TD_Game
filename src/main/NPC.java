@@ -135,9 +135,8 @@ public class NPC {
 			{}
 			else{
 				m.getGame().destroySprite(getSprite());
-				Sprite s = new Sprite(m, (int)getX(), (int)getY(), Game.rotate(Animation.getImagePhase(animation,phase,m),orientation*90), this, false);
-				m.getGame().setNewSprite(s);
-				setSprite(s);
+				setSprite(new Sprite(m, (int)getX(), (int)getY(), Game.rotate(Animation.getImagePhase(animation,phase,m),orientation*90), this, false));
+				m.getGame().setNewSprite(getSprite());
 			}
 		}
 	}
@@ -151,7 +150,7 @@ public class NPC {
 	
 	public void die(){
 		m.getGame().destroySprite(getSprite());
-		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), Game.rotate(getAnimationDeath(),orientation*90), this, false, getAnimationDeathDuration()));
+		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()).setOrientation(orientation*90));
 		m.getGame().destroyNPC(this);
 	}
 	
@@ -232,47 +231,56 @@ public class NPC {
 			pathIndex=1;
 		}
 		else{
-			for(int loop=0;loop<delta;loop++){
-				if(wait==0){
-					setAnimation(ANIMATION_WALK);
-					if(tileX==targetX&&tileY==targetY){
-						command = COMMAND_NOTHING;
-						setAnimation(ANIMATION_STAND);
-						return;
-					}
-					
-					x=tileX*m.getGame().getTileWidth();
-					y=tileY*m.getGame().getTileWidth();
-					
-					if(tileX<path.get(pathIndex).x){orientation = ORIENTATION_EAST;}
-					if(tileY>path.get(pathIndex).y){orientation = ORIENTATION_NORTH;}
-					if(tileX>path.get(pathIndex).x){orientation = ORIENTATION_WEST;}
-					if(tileY<path.get(pathIndex).y){orientation = ORIENTATION_SOUTH;}
-					
-					tileX = path.get(pathIndex).x;
-					tileY = path.get(pathIndex).y;
-					
-					
-					pathIndex++;
-					
-					wait = (int) (1000/getMovementSpeed());
+			if(wait<=0){
+				setAnimation(ANIMATION_WALK);
+				if(tileX==targetX&&tileY==targetY){
+					command = COMMAND_NOTHING;
+					setAnimation(ANIMATION_STAND);
+					return;
 				}
-				else{
-					if(tileX*m.getGame().getTileWidth()>x){
-						x=((double)tileX-(double)wait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-					}
-					if(tileX*m.getGame().getTileWidth()<x){
-						x=((double)tileX+(double)wait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-					}
-					if(tileY*m.getGame().getTileWidth()>y){
-						y=((double)tileY-(double)wait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-					}
-					if(tileY*m.getGame().getTileWidth()<y){
-						y=((double)tileY+(double)wait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-					}
-					
-					wait--;
+				
+				x=tileX*m.getGame().getTileWidth();
+				y=tileY*m.getGame().getTileWidth();
+				
+				if(tileX<path.get(pathIndex).x){orientation = ORIENTATION_EAST;}
+				if(tileY>path.get(pathIndex).y){orientation = ORIENTATION_NORTH;}
+				if(tileX>path.get(pathIndex).x){orientation = ORIENTATION_WEST;}
+				if(tileY<path.get(pathIndex).y){orientation = ORIENTATION_SOUTH;}
+				
+				tileX = path.get(pathIndex).x;
+				tileY = path.get(pathIndex).y;
+				
+				
+				pathIndex++;
+				
+				int intWait = 0;
+				if(wait<0)
+					intWait=-wait;
+				
+				wait = (int) (1000/getMovementSpeed());
+				if(intWait>0)
+					goToTarget(intWait);
+			}
+			else{
+				wait-=delta;
+				int intWait = wait;
+				
+				if(wait<=0){intWait=0;}
+				
+				if(tileX*m.getGame().getTileWidth()>x){
+					x=((double)tileX-(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
 				}
+				if(tileX*m.getGame().getTileWidth()<x){
+					x=((double)tileX+(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
+				}
+				if(tileY*m.getGame().getTileWidth()>y){
+					y=((double)tileY-(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
+				}
+				if(tileY*m.getGame().getTileWidth()<y){
+					y=((double)tileY+(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
+				}
+				
+				if(wait<=0){goToTarget(-wait);}
 			}
 		}
 	}

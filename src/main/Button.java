@@ -11,6 +11,7 @@ public abstract class Button {
 	private Main m;
 	private Button previous;
 	private Button next;
+	private String des = "";
 	
 	public Button(Main m, int x, int y, int width, int height, BufferedImage img){
 		this.m = m;
@@ -69,12 +70,18 @@ public abstract class Button {
 		this.height = height;
 	}
 
-	
-	public void click(int x, int y){
+	public boolean isHere(int x, int y){
 		int offsetX = m.getWidth()-m.getGame().getPanelWidth();
 		int offsetY = m.getGame().getPanelWidth()+m.getGame().getMarginMinimap()*3;
 		if( x>=getX()+offsetX && x<=getX()+getWidth()+offsetX &&
 			y>=getY()+offsetY && y<=getY()+getHeight()+offsetY ){
+			return true;
+		}
+		return false;
+	}
+	
+	public void click(int x, int y){
+		if(isHere(x,y)){
 			run();
 		}
 	}
@@ -109,5 +116,13 @@ public abstract class Button {
 
 	public void setNext(Button next) {
 		this.next = next;
+	}
+
+	public String getDes() {
+		return des;
+	}
+
+	public void setDes(String des) {
+		this.des = des;
 	}
 }

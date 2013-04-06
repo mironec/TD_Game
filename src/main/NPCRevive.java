@@ -29,7 +29,7 @@ public class NPCRevive extends NPC{
 	public void die(){
 		if(died){
 			m.getGame().destroySprite(getSprite());
-			m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), Game.rotate(getAnimationDeath(),getOrientation()*90), this, false, getAnimationDeathDuration()));
+			m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()).setOrientation(getOrientation()*90));
 			m.getGame().destroyNPC(this);
 		}
 		else{

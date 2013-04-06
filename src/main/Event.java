@@ -20,13 +20,13 @@ public abstract class Event {
 		time-=delta;
 		
 		if(time<=0){
-			run(); repeat--;
-			if(repeat != 0){time = delay;}//+time;}
+			run(-time); repeat--;
+			if(repeat != 0){time = delay+time;}
 			else{m.destroyEvent(this);}
 		}
 	}
 	
-	public abstract void run ();
+	public abstract void run (int delta);
 
 	public Event getPrevious() {
 		return previous;

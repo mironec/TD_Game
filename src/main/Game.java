@@ -1,8 +1,10 @@
 package main;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -23,6 +25,7 @@ public class Game {
 	private Graphics minimapG;
 	private Map currentMap;
 	private static final String passable = "10";
+	private static final String buildable = "01";
 	
 	private int mapGraphicWidth;
 	private int mapGraphicHeight;
@@ -53,6 +56,8 @@ public class Game {
 	private TowerType towerSelectedTowerType;
 	
 	private int money = 30;
+	private int lives = 40;
+	private Sprite tooltip;
 	private String status = "";
 	
 	public Game (Main m) {
@@ -79,16 +84,14 @@ public class Game {
 		
 		resizeImages();
 		
-		Event e = new Event(m,200,50){
-			public void run() {
+		Event e = new Event(m,1500,50){
+			public void run(int delta) {
 				NPC npc = createNPC(findNPCTypeById(1));
 				npc.issueMoveCommand(19,19);
+				npc.logic(delta);
 			}
 		};
-		
 		m.setNewEvent(e);
-		
-		
 	}
 	
 	public void prepareButtons(){
@@ -103,7 +106,8 @@ public class Game {
 					public void run() {
 						selectTower( findTowerTypeById(id) );
 					}
-				}; 
+				};
+				b.setDes(t.getDescription());
 				setNewButton(b);
 				
 				posX += getPanelWidth()/4 + getMarginMinimap();
@@ -128,7 +132,7 @@ public class Game {
 		else{
 			setStatus("Not enough money!");
 			m.setNewEvent(new Event(m, 2000, 1) {
-				public void run() {
+				public void run(int delta) {
 					setStatus("","Not enough money!");
 				}
 			});
@@ -185,13 +189,35 @@ public class Game {
 		catch (IOException e) {System.out.println("An Image couldn't be found.");}
 	}
 	
-	public BufferedImage resize(BufferedImage img, int x, int y){
+	/*public BufferedImage resize(BufferedImage img, int x, int y){
 		BufferedImage ret;
 		ret = new BufferedImage(x, y, BufferedImage.TYPE_INT_ARGB);
 		ret.getGraphics().drawImage(img, 0, 0, x, y, 0, 0, img.getWidth(), img.getHeight(), m);
 		ret.getGraphics().dispose();
 		return ret;
-	}
+	}*/
+	
+	/*public BufferedImage resize(BufferedImage img, int x, int y){
+		BufferedImage after = new BufferedImage(x, y, BufferedImage.TYPE_INT_ARGB);
+		AffineTransform at = new AffineTransform();
+		at.scale((double)x/(double)img.getWidth(), (double)y/(double)img.getHeight());
+		AffineTransformOp scaleOp = 
+		   new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
+		after = scaleOp.filter(img, after);
+		return after;
+	}*/
+	
+	public static BufferedImage resize(BufferedImage img, int newW, int newH) {  
+        int w = img.getWidth();
+        int h = img.getHeight();
+        BufferedImage dimg = new BufferedImage(newW, newH, img.getType());
+        Graphics2D g = dimg.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+        RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(img, 0, 0, newW, newH, 0, 0, w, h, null);
+        g.dispose();
+        return dimg;
+    }
 	
 	public static BufferedImage rotate(BufferedImage img, int amnout){
 		BufferedImage ret = new BufferedImage(img.getWidth(),img.getHeight(), BufferedImage.TYPE_INT_ARGB);
@@ -305,6 +331,12 @@ public class Game {
 				key = s.substring( s.lastIndexOf(find) );
 				value = key.substring(find.length(), key.indexOf(";"));
 				t.setCost( Integer.parseInt(value) ); }
+				////////////////////////////////////////////////////////
+				find = "description=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				t.setDescription( value ); }
 				////////////////////////////////////////////////////////
 				find = "maxTargets=";
 				if(s.contains(find)){
@@ -630,8 +662,11 @@ public class Game {
 			
 			if(isTowerSelected()){
 				if(isCursorInPlayingField()){
-					deselectTower(false);
-					createTower ( getTowerSelectedTowerType() ).setX(getTowerSelectedX()*getTileWidth()).setY(getTowerSelectedY()*getTileWidth());
+					if( isBuildable(getTile(getTowerSelectedX(), getTowerSelectedY())) &&
+						!isTowerOn(getTowerSelectedX(), getTowerSelectedY()) ){
+						deselectTower(false);
+						createTower ( getTowerSelectedTowerType() ).setX(getTowerSelectedX()*getTileWidth()).setY(getTowerSelectedY()*getTileWidth());
+					}
 				}
 				else{
 					deselectTower(true);
@@ -642,7 +677,7 @@ public class Game {
 				m.mouseStart.x<=m.width-getMarginMinimap()&&
 				m.mouseStart.y>=getMarginMinimap()&&
 				m.mouseStart.y<=panelWidth-getMarginMinimap())
-			{				
+			{
 				offsetXF = (m.mousePoint.x-m.width+panelWidth-getMarginMinimap()
 						-0.5f*(m.width-panelWidth)/(double)mapGraphicWidth*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
 						*(mapGraphicWidth/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
@@ -658,6 +693,42 @@ public class Game {
 			
 			for(Button b = getLastButton();b!=null;b=b.getPrevious()){
 				b.click(m.mousePoint.x, m.mousePoint.y);
+			}
+		}
+		
+		else{
+			if(getTooltip()!=null){
+				destroySprite(getTooltip());
+				setTooltip(null);
+			}
+			for(Button b = getLastButton();b!=null;b=b.getPrevious()){
+				if(b.isHere(m.mousePoint.x, m.mousePoint.y)){
+					BufferedImage img = new BufferedImage(getPanelWidth()-marginMinimap*2, getPanelHeight()-marginMinimap*2, BufferedImage.TYPE_INT_ARGB);
+					Graphics g = img.getGraphics();
+					g.setColor(Color.yellow);
+					g.fillRect(0, 0, getPanelWidth()-marginMinimap*2, getPanelWidth()-marginMinimap*2);
+					g.setColor(Color.black);
+					g.drawRect(0, 0, getPanelWidth()-marginMinimap*2, getPanelWidth()-marginMinimap*2);
+					g.setFont(new Font("monospaced", Font.PLAIN, getPanelWidth()/10));
+					int y = 2;
+					int x = 2;
+					for (String line : b.getDes().split("\n")){
+						y += g.getFontMetrics().getHeight();
+						x = 2;
+						for(String command : line.split("%")){
+							if(command.startsWith("FontSize:")){
+								g.setFont(new Font(g.getFont().getFontName(), g.getFont().getStyle(), Integer.parseInt(command.substring(command.indexOf(":")+1))));
+							}
+							else{
+								g.drawString(command, x, y);
+								x+=command.length()*g.getFontMetrics().getWidths()[0];
+							}
+						}
+					}
+					g.dispose();
+					setTooltip(new Sprite(m, m.width-getPanelWidth()+marginMinimap, m.height-getPanelHeight()+marginMinimap, img, this, false));
+					setNewSprite(getTooltip());
+				}
 			}
 		}
 		
@@ -679,9 +750,29 @@ public class Game {
 		}
 	}
 	
+	private boolean isTowerOn(int x, int y) {
+		for(Tower t = getLastTower();t!=null;t = t.getPrevious()){
+			if(t.getX() / getTileWidth() == x &&
+			   t.getY() / getTileWidth() == y){
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static boolean isPassable(int tileid){
 		if(tileid>=0&&tileid<=passable.length()){
 		if(passable.toCharArray()[tileid]=='1'){
+			return true;
+		}
+		else{return false;}
+		}
+		else{return false;}
+	}
+	
+	public static boolean isBuildable(int tileid){
+		if(tileid>=0&&tileid<=buildable.length()){
+		if(buildable.toCharArray()[tileid]=='1'){
 			return true;
 		}
 		else{return false;}
@@ -1060,5 +1151,21 @@ public class Game {
 	
 	public void setStatus(String status) {
 		this.status = status;
+	}
+
+	public int getLives() {
+		return lives;
+	}
+
+	public void setLives(int lives) {
+		this.lives = lives;
+	}
+
+	public Sprite getTooltip() {
+		return tooltip;
+	}
+
+	public void setTooltip(Sprite tooltip) {
+		this.tooltip = tooltip;
 	}
 }
