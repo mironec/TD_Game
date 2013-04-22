@@ -827,6 +827,7 @@ public class Game {
 		g.drawString("Lives: " + lives, m.width-panelWidth+75, panelWidth+getMarginMinimap()*2);
 		g.drawString("Next Wave: " + nextWave.getTime()/1000 + "s", getMarginMinimap()*2, m.height-panelHeight+getMarginMinimap()*2);
 		g.drawString(getStatus(), marginMinimap*2, m.height-marginMinimap*4);
+		g.drawString(getAdditionalStatus(), marginMinimap*2, m.height-panelHeight+marginMinimap*5);
 		
 		for(Button b = getLastButton();b!=null;b=b.getPrevious()){
 			b.drawLogic();
