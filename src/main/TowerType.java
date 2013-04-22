@@ -6,9 +6,11 @@ public class TowerType extends Tower{
 	private TowerType base;
 	private TowerType previous;
 	private TowerType next;
+	private int cost;
 	private String type;
 	private Object[] args;
 	private int maxArgs=0;
+	private String description="";
 	
 	public TowerType(Main m, int id) {
 		super(m, 0, 0, null);
@@ -67,6 +69,22 @@ public class TowerType extends Tower{
 	public void newArg(Object o){
 		args[maxArgs]=o;
 		maxArgs++;
+	}
+
+	public int getCost() {
+		return cost;
+	}
+
+	public void setCost(int cost) {
+		this.cost = cost;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
 	}
 	
 }

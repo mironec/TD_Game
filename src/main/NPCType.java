@@ -1,18 +1,21 @@
 package main;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class NPCType extends NPC{
 
 	private int id;
 	private NPCType previous;
 	private NPCType next;
 	private String type;
-	private Object[] args;
-	private int maxArgs=0;
+	private Map<String,Object> args = new HashMap<String, Object>();
+	private int perWave;
+	private int bounty;
 	
 	public NPCType (Main m, int id){
 		super(m, 0, 0, null);
 		this.id = id;
-		this.args = new Object[2];
 	}
 
 	public int getId() {
@@ -47,24 +50,36 @@ public class NPCType extends NPC{
 		this.type = type;
 	}
 
-	public Object[] getArgs() {
+	public Map<String,Object> getArgs() {
 		return args;
 	}
 
-	public void setArgs(Object[] args) {
+	public void setArgs(Map<String,Object> args) {
 		this.args = args;
 	}
-
-	public int getMaxArgs() {
-		return maxArgs;
-	}
-
-	public void setMaxArgs(int maxArgs) {
-		this.maxArgs = maxArgs;
+	
+	public void addArg(String s, Object o){
+		args.put(s, o);
 	}
 	
-	public void newArg(Object o){
-		args[maxArgs]=o;
-		maxArgs++;
+	public Object getArg(String s){
+		return args.get(s);
 	}
+
+	public int getPerWave() {
+		return perWave;
+	}
+
+	public void setPerWave(int perWave) {
+		this.perWave = perWave;
+	}
+
+	public int getBounty() {
+		return bounty;
+	}
+
+	public void setBounty(int bounty) {
+		this.bounty = bounty;
+	}
+	
 }

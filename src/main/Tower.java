@@ -91,6 +91,7 @@ public class Tower {
 			animation = getAnimationAttack();
 		}
 		
+		if(getAnimationTime()+delta > duration && getAnimation() == ANIMATION_ATTACK){ setAnimation(ANIMATION_STAND); }
 		setAnimationTime( (getAnimationTime()+delta) % duration );
 		int phase = (int) ( (double)getAnimationTime() / (double)duration * (double)Animation.getImagePhases(animation) );
 		if(getSprite()==null){
@@ -140,16 +141,18 @@ public class Tower {
 		return x;
 	}
 
-	public void setX(int x) {
+	public Tower setX(int x) {
 		this.x = x;
+		return this;
 	}
 
 	public int getY() {
 		return y;
 	}
 
-	public void setY(int y) {
+	public Tower setY(int y) {
 		this.y = y;
+		return this;
 	}
 	
 	public void damageGround(Projectile p){
@@ -157,7 +160,8 @@ public class Tower {
 		
 		if(target!=null)
 			if( getDistance(target.getX(),target.getY(),p.getX(),p.getY()) < m.getGame().getTileWidth() )
-				target.damage(getDamage());
+				if( !target.isUntargetable() )
+					target.damage(getDamage());
 	}
 	
 	public void attack(){
@@ -165,7 +169,6 @@ public class Tower {
 		
 		setAAcd(1.0D/getAttackSpeed());
 		setAnimation(ANIMATION_ATTACK);
-		//m.setNewEvent(new Event(m,getAnimationAttackDuration(),0){ public void run(){setAnimation(ANIMATION_STAND);} });
 		
 		Projectile p = new Projectile(m, getX(), getY(), target, this);
 		p.setAnimationDeath(getProjectileAnimationDeath());

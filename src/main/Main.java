@@ -11,6 +11,10 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 
+/*
+ * © Copyright Miron Zelina 2013
+ */
+
 public class Main extends Applet implements Runnable, KeyListener, MouseListener, MouseMotionListener {
 	
 	/**
@@ -24,6 +28,8 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	public int width, height = 1;
 	BufferedImage backbuffer;
 	Graphics backbufferG;
+	BufferedImage backbuffer2;
+	Graphics backbuffer2G;
 	Thread mainThread, fpsThread;
 	int fps, frames = 0;
 	boolean atWork = false;
@@ -31,7 +37,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	int cas=0;
 	boolean keyDown[];
 	boolean mouseDown[];
-	Point mousePoint;
+	Point mousePoint = new Point(-1,-1);
 	Point mouseStart;
 	Point mouseEnd;
 	double keySensitivity = 0.25D;
@@ -43,8 +49,19 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 
 	private Event lastEvent;
 	
-	int delta;
-	long lastDelta;
+    final double GAME_HERTZ = 30.0;
+    final double TIME_BETWEEN_UPDATES = 1000000000 / GAME_HERTZ;
+    final int MAX_UPDATES_BEFORE_RENDER = 5;
+    double lastUpdateTime = System.nanoTime();
+    
+    final double TARGET_FPS = 100;
+    final double TARGET_TIME_BETWEEN_RENDERS = 1000000000 / TARGET_FPS;
+    double lastRenderTime = System.nanoTime();
+
+    int lastSecondTime = (int) (lastUpdateTime / 1000000000);
+	
+	private boolean gameRunning = true;
+	private boolean paused = false;
 	
 	public void init () {
 		width = this.getWidth();
@@ -52,6 +69,8 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		
 		backbuffer = new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
 		backbufferG = backbuffer.getGraphics();
+		backbuffer2 = new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
+		backbuffer2G = backbuffer2.getGraphics();
 		mainThread = new Thread(this);
 		fpsThread = new Thread(this);
 		keyDown = new boolean [256];
@@ -60,86 +79,92 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		this.addKeyListener(this);
 		this.addMouseListener(this);
 		this.addMouseMotionListener(this);
-		lastDelta = System.nanoTime()/1000000;
-		delta = 0;
-		
+				
 		game = new Game(this);
 		game.init();
 		
 		mainThread.start();
 		fpsThread.start();
 		
-		boolean dobre = game.loadMap("mapa.txt",Map.METHOD_LOAD_FILE);
+		/*boolean dobre = game.loadMap("mapa.txt",Map.METHOD_LOAD_FILE);
 		game.readMap();
 		if(!dobre){
 			System.out.println("PROBLEM!!!");
 			System.exit(1);
-		}
+		}*/
 		renderMode=RENDER_MODE_GAME;
+		
 	}
 	
 	public void update( Graphics g ) {
-	   g.drawImage( backbuffer, 0, 0, this );
-	   atWork = false;
-	}
+      g.drawImage( backbuffer2, 0, 0, this );
+      atWork=false;
+   }
 
-	public void paint( Graphics g ) {
-	   update( g );
-	}
-	
+   public void paint( Graphics g ) {
+      update( g );
+   }
+
 	public void paintbb(int delta){
-		if(!atWork){
-			delta = interiorDelta + delta;
-			interiorDelta = 0;
-			atWork = true;
-			if(renderMode==RENDER_MODE_GAME){
-				frames++;
-				
-				game.render(delta);
-				
-				backbufferG.setColor(Color.white);
-				backbufferG.drawString("FPS: " + fps, 10, 10);
-			}
-			if(renderMode==RENDER_MODE_MENU){
-				frames++;
-				backbufferG.setColor(Color.white);
-				backbufferG.fillRect(0, 0, width, height);
-				
-				backbufferG.setColor(Color.black);
-				backbufferG.drawString("FPS: " + fps, 10, 10);
-			}
+		if(renderMode==RENDER_MODE_GAME){			
+			game.render(delta);
 			
-			repaint();
+			backbufferG.setColor(Color.white);
+			backbufferG.drawString("FPS: " + fps, 10, 10);
 		}
-		else{
-			interiorDelta += delta;
+		if(renderMode==RENDER_MODE_MENU){
+			backbufferG.setColor(Color.white);
+			backbufferG.fillRect(0, 0, width, height);
+			
+			backbufferG.setColor(Color.black);
+			backbufferG.drawString("FPS: " + fps, 10, 10);
 		}
+		frames++;
+		backbuffer2G.drawImage(backbuffer, 0, 0, this);
+		repaint();
 	}
 
 	@SuppressWarnings("static-access")
 	public void run() {
-		while(true){
-			if(Thread.currentThread()==mainThread){
-				int delta = (int) (System.nanoTime()/1000000 - lastDelta);
-				lastDelta = System.nanoTime()/1000000;
+		while (gameRunning) {
+			if(Thread.currentThread()==mainThread) {
 				
-				//System.out.println(delta);
-				//elapsedTime+=delta;
-				
-				paintbb(delta);
-				handleInput(delta);
-				logic(delta);
-				events(delta);
-				//try {mainThread.sleep(10);} catch (InterruptedException e) {e.printStackTrace();}
+				double now = System.nanoTime();
+			    
+			    if (!paused){
+		    		logic((int) ((now - lastUpdateTime)/1000/1000));
+		    		events((int) ((now - lastUpdateTime)/1000/1000));
+					handleInput((int) ((now - lastUpdateTime)/1000/1000));
+					lastUpdateTime = now;
+
+			        paintbb( (int) ((now - lastRenderTime)/1000/1000) );
+			        lastRenderTime = now;
+			         
+		            int thisSecond = (int) (lastUpdateTime / 1000/1000/1000);
+		            if (thisSecond > lastSecondTime)
+		            {
+		            	fps = frames;
+		                frames = 0;
+		                lastSecondTime = thisSecond;
+		            }
+		         		            
+		            while ( now - lastRenderTime < TARGET_TIME_BETWEEN_RENDERS && now - lastUpdateTime < TIME_BETWEEN_UPDATES)
+		            {
+		               mainThread.yield();
+		            
+		               try {mainThread.sleep(1);} catch(Exception e) {} 
+		            
+		               now = System.nanoTime();
+		            }
+			    }
 			}
-			if(Thread.currentThread()==fpsThread){
-				//elapsedTime2+=1;
-				
+			
+			/*if(Thread.currentThread()==fpsThread){
 				fps=frames;
 				frames=0;
 				cas++;
 				try {fpsThread.sleep(1000);} catch (InterruptedException e) {e.printStackTrace();}
-			}
+			}*/
 		}
 	}
 	

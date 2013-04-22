@@ -1,8 +1,11 @@
 package main;
 
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -15,14 +18,21 @@ import javax.imageio.ImageIO;
 
 public class Game {
 	
-	private int tileWidth = 30;
-	private BufferedImage tiles[];
-	private int maxTiles = 1;
+	private int tileWidth = 40;
+	//private BufferedImage tiles[];
+	//private int maxTiles = 1;
 	private BufferedImage black;
 	private BufferedImage minimap;
 	private Graphics minimapG;
 	private Map currentMap;
-	private static final String passable = "10";
+	private static final String passable = "01110";
+	private static final String buildable = "10000";
+	
+	private static final byte TILE_GRASS = 0;
+	private static final byte TILE_DIRT = 1;
+	private static final byte TILE_SPAWN = 2;
+	private static final byte TILE_GOAL = 3;
+	private static final byte TILE_VOID = 4;
 	
 	private int mapGraphicWidth;
 	private int mapGraphicHeight;
@@ -44,9 +54,27 @@ public class Game {
 	private TowerType lastTowerType;
 	private NPCType lastNPCType;
 	private Animation lastAnimation;
+	private Button lastButton;
+	
+	private boolean towerSelected;
+	private Sprite towerSelectedSprite;
+	private int towerSelectedX, towerSelectedY;
+	private BufferedImage towerSelectedImage;
+	private TowerType towerSelectedTowerType;
+	
+	private int money = 30;
+	private int lives = 40;
+	private Sprite tooltip;
+	private String status = "";
+	//private String nextWaveStatus = "";
+	private String additionalStatus = "";
+	private int finalsSpawned=0;
+	private int finalsKilled=0;
+	private Event nextWave;
+	
+	private int waveId = 1;
 	
 	public Game (Main m) {
-		tiles = new BufferedImage[maxTiles+1];
 		black = new BufferedImage(tileWidth, tileWidth, BufferedImage.TYPE_INT_ARGB);
 		Graphics g = black.getGraphics();
 		g.setColor(Color.black);
@@ -54,35 +82,165 @@ public class Game {
 		g.dispose();
 		maxOffsetX=1;
 		maxOffsetY=1;
+		towerSelected = false;
+		towerSelectedSprite = null;
+		
 		this.m=m;
 		currentMap = new Map(m);
 	}
 	
 	public void init(){
-		loadMapTiles();
+		loadMap("mapa.txt", Map.METHOD_LOAD_FILE);
+		readMap();
+		
 		loadTowerTypes();
 		loadNPCTypes();
+		prepareButtons();
 		
 		resizeImages();
 		
-		Event e = new Event(m,1000,1){
-			public void run() {
-				NPC npc = createNPC(findNPCTypeById(1));
-				//npc.copyFromNPC(getLastNPCType());
-				//setNewNPC(npc);
-				npc.issueMoveCommand(19,19);
+		//setStatus("Time to next wave: 5 seconds");
+		nextWave = new Event(m,5000,1){
+			public void run(int delta){
+				spawnWave(findNPCTypeById(waveId+1).getPerWave(),1000);
 			}
 		};
+				
+		m.setNewEvent(nextWave);
+	}
+	
+	public void spawnWave(int number, int delays){
 		
-		Tower t = createTower(findTowerTypeById(1));
-		t.setX(2*getTileWidth());
-		t.setY(2*getTileWidth());
+		setWaveId(getWaveId()+1);
+		final int waveId = getWaveId();
 		
-		//System.out.println();
+		NPC npc = createNPC(findNPCTypeById(waveId));
+		npc.setX(findSpawn().x*tileWidth);
+		npc.setY(findSpawn().y*tileWidth);
+		npc.issueMoveCommand(findGoal().x, findGoal().y);
 		
+		Event e = new Event(m,delays,number-1){
+			public void run(int delta){
+				NPC npc = createNPC(findNPCTypeById(waveId));
+				npc.setX(findSpawn().x*tileWidth);
+				npc.setY(findSpawn().y*tileWidth);
+				npc.issueMoveCommand(findGoal().x, findGoal().y);
+				npc.logic(delta);
+			}
+		};
 		m.setNewEvent(e);
 		
 		
+		if(findNPCTypeById(waveId+1)!=null){
+			nextWave = new Event(m,delays*number+10000,1){
+				public void run(int delta){
+					spawnWave(findNPCTypeById(waveId+1).getPerWave(), 1000);
+				}
+			};
+			m.setNewEvent(nextWave);
+		}
+		else{
+			nextWave = new Event(m,delays*number+10000,1){
+				public void run(int delta){
+					setAdditionalStatus("Finals killed: 0");
+					
+					finalWave(delta);
+				}
+			};
+			m.setNewEvent(nextWave);
+		}
+	}
+	
+	public void finalWave(int delta){
+		NPC npc = createNPC(findNPCTypeById(-1));
+		npc.setX(findSpawn().x*tileWidth);
+		npc.setY(findSpawn().y*tileWidth);
+		npc.issueMoveCommand(findGoal().x, findGoal().y);
+		npc.logic(delta);
+		
+		Event e = new Event(m,1500,1){
+			public void run (int delta){
+				finalWave(delta);
+			}
+		};
+		m.setNewEvent(e);
+	}
+	
+	public Point findSpawn(){
+		Point p = new Point(0,0);
+		
+		for(int loop = 4; loop < currentMap.getData().length; loop++){
+			if(currentMap.getData()[loop] == TILE_SPAWN){
+				p=new Point((loop-4)%currentMap.getWidth(),(loop-4)/currentMap.getHeight());
+			}
+		}
+		
+		return p;
+	}
+	
+	public Point findGoal(){
+		Point p = new Point(0,0);
+		
+		for(int loop = 4; loop < currentMap.getData().length; loop++){
+			if(currentMap.getData()[loop] == TILE_GOAL){
+				p=new Point((loop-4)%currentMap.getWidth(),(loop-4)/currentMap.getHeight());
+			}
+		}
+		
+		return p;
+	}
+	
+	public void prepareButtons(){
+		int posX = getMarginMinimap()*2;
+		int posY = getMarginMinimap()*2;
+		
+		for(TowerType t = getLastTowerType();t!=null;t=t.getPrevious()){
+			if(t.getBase() == null){									//The Tower is not an upgrade from another Tower
+				final int id = t.getId();
+				Button b = new Button(m, posX, posY, getPanelWidth()/4, getPanelWidth()/4,
+						resize(Animation.getImagePhase(t.getAnimationStand(), 0, m),getPanelWidth()/4,getPanelWidth()/4) ) {
+					public void run() {
+						selectTower( findTowerTypeById(id) );
+					}
+				};
+				b.setDes(t.getDescription());
+				setNewButton(b);
+				
+				posX += getPanelWidth()/4 + getMarginMinimap();
+				if(posX>=getPanelWidth()){
+					posX = getMarginMinimap()*2;
+					posY += getPanelWidth()/4 + getMarginMinimap();
+				}
+			}
+		}
+	}
+	
+	public void selectTower(TowerType towerType){
+		if(isTowerSelected()){
+			deselectTower(true);
+		}
+		if( getMoney() >= towerType.getCost() ){
+			setMoney(getMoney()-towerType.getCost());
+			setTowerSelected(true);
+			setTowerSelectedImage(Animation.getImagePhase(towerType.getAnimationStand(), 0, m));
+			setTowerSelectedTowerType(towerType);
+		}
+		else{
+			setStatus("Not enough money!");
+			m.setNewEvent(new Event(m, 2000, 1) {
+				public void run(int delta) {
+					setStatus("","Not enough money!");
+				}
+			});
+		}
+	}
+	
+	public void deselectTower(boolean refund){
+		if(refund)
+			setMoney(getMoney()+getTowerSelectedTowerType().getCost());
+		setTowerSelected(false);
+		destroySprite(getTowerSelectedSprite());
+		setTowerSelectedImage(null);
 	}
 	
 	public void resizeImages(){
@@ -97,11 +255,18 @@ public class Game {
 			
 			img = ImageIO.read(new URL(m.getCodeBase() + "npcs/" + npc.getId() + "-walk.png"));
 			npc.setAnimationWalk( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
+			
+			if(npc.getArg("animationRevive")!=null){
+				img = ImageIO.read(new URL(m.getCodeBase() + "npcs/" + npc.getId() + "-revive.png"));
+				npc.addArg( "animationRevive", resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
+			}
 		}
 		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
 			npc.setAnimationDeath(npc.getNPCType().getAnimationDeath());
 			npc.setAnimationStand(npc.getNPCType().getAnimationStand());
 			npc.setAnimationWalk(npc.getNPCType().getAnimationWalk());
+			if(npc instanceof NPCRevive)
+				((NPCRevive)npc).setAnimationRevive((BufferedImage)npc.getNPCType().getArg("animationRevive"));
 		}
 		
 		for(TowerType t = getLastTowerType();t!=null;t=t.getPrevious()){
@@ -123,24 +288,29 @@ public class Game {
 		}
 		
 		}
-		catch (MalformedURLException e) {System.out.println("An Image couldn't be found.");} 
-		catch (IOException e) {System.out.println("An Image couldn't be found.");}
+		catch (MalformedURLException e) {e.printStackTrace(); /*System.out.println("An Image couldn't be found.");*/} 
+		catch (IOException e) {e.printStackTrace(); /*System.out.println("An Image couldn't be found.");*/}
 	}
 	
-	public BufferedImage resize(BufferedImage img, int x, int y){
-		BufferedImage ret;
-		ret = new BufferedImage(x, y, BufferedImage.TYPE_INT_ARGB);
-		ret.getGraphics().drawImage(img, 0, 0, x, y, 0, 0, img.getWidth(), img.getHeight(), m);
-		ret.getGraphics().dispose();
-		return ret;
-	}
+	public static BufferedImage resize(BufferedImage img, int newW, int newH) {  
+        int w = img.getWidth();
+        int h = img.getHeight();
+        BufferedImage dimg = new BufferedImage(newW, newH, img.getType());
+        Graphics2D g = dimg.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+        RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(img, 0, 0, newW, newH, 0, 0, w, h, null);
+        g.dispose();
+        return dimg;
+    }
 	
 	public static BufferedImage rotate(BufferedImage img, int amnout){
 		BufferedImage ret = new BufferedImage(img.getWidth(),img.getHeight(), BufferedImage.TYPE_INT_ARGB);
 		AffineTransform at = new AffineTransform();
-		at.rotate(-Math.PI/180.0D*(double)(amnout-90),img.getWidth()/2,img.getHeight()/2);
+		at.rotate(-Math.PI/180.0D*(double)(amnout),img.getWidth()/2,img.getHeight()/2);
 		Graphics2D g2d = (Graphics2D) ret.getGraphics();
         g2d.drawImage(img, at, null);
+        g2d.dispose();
 		return ret;
 	}
 	
@@ -175,6 +345,7 @@ public class Game {
 				if(con.getContentLength()<=0){break;}
 				byte[] b = new byte[con.getContentLength()];
 				con.getInputStream().read(b);
+				con.getInputStream().close();
 				String s = new String(b);
 				TowerType t = new TowerType(m, x);
 				String key;
@@ -241,6 +412,18 @@ public class Game {
 				value = key.substring(find.length(), key.indexOf(";"));
 				t.setBase( findTowerTypeById(Integer.parseInt(value)) ); }
 				////////////////////////////////////////////////////////
+				find = "cost=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				t.setCost( Integer.parseInt(value) ); }
+				////////////////////////////////////////////////////////
+				find = "description=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				t.setDescription( value ); }
+				////////////////////////////////////////////////////////
 				find = "maxTargets=";
 				if(s.contains(find)){
 				key = s.substring( s.lastIndexOf(find) );
@@ -256,20 +439,111 @@ public class Game {
 			}
 		}
 		catch (MalformedURLException e) {e.printStackTrace();}
-		catch (IOException e) {System.out.println("An Image couldn't be found.");}
+		catch (IOException e) {e.printStackTrace();/*System.out.println("An Image couldn't be found.");*/}
 		
 	}
+	
+	/*public void loadFinal(){
+		try{
+			URL url = new URL(m.getCodeBase() + "npcs/final.cfg");
+			URLConnection con = url.openConnection();
+			byte[] b = new byte[con.getContentLength()];
+			con.getInputStream().read(b);
+			con.getInputStream().close();
+			String s = new String(b);
+			NPCType npc = new NPCType(m, -1);
+			String key;
+			String value;
+			String find;
+			////////////////////////////////////////////////////////
+			find = "maxHealth=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.setMaxHealth( Integer.parseInt(value) ); }
+			////////////////////////////////////////////////////////
+			find = "movementSpeed=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.setMovementSpeed( Double.parseDouble(value) ); }
+			////////////////////////////////////////////////////////
+			find = "animationStandDuration=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.setAnimationStandDuration( Integer.parseInt(value) ); }
+			////////////////////////////////////////////////////////
+			find = "animationWalkDuration=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.setAnimationWalkDuration( Integer.parseInt(value) ); }
+			////////////////////////////////////////////////////////
+			find = "animationDeathDuration=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.setAnimationDeathDuration( Integer.parseInt(value) ); }
+			////////////////////////////////////////////////////////
+			find = "perWave=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.setPerWave( Integer.parseInt(value) ); }
+			////////////////////////////////////////////////////////
+			find = "bounty=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.setBounty( Integer.parseInt(value) ); }
+			////////////////////////////////////////////////////////
+			find = "type=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.setType( value ); }
+			////////////////////////////////////////////////////////
+			find = "reviveTimer=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.addArg( "reviveTimer", Integer.parseInt(value) ); }
+			////////////////////////////////////////////////////////
+			find = "animationReviveDuration=";
+			if(s.contains(find)){
+			key = s.substring( s.lastIndexOf(find) );
+			value = key.substring(find.length(), key.indexOf(";"));
+			npc.addArg( "animationReviveDuration", Integer.parseInt(value) ); }
+			////////////////////////////////////////////////////////
+			npc.setAnimationStand( ImageIO.read(new URL(m.getCodeBase() + "npcs/final-stand.png")) );
+			npc.setAnimationWalk( ImageIO.read(new URL(m.getCodeBase() + "npcs/final-walk.png")) );
+			npc.setAnimationDeath( ImageIO.read(new URL(m.getCodeBase() + "npcs/final-death.png")) );
+			if(new URL(m.getCodeBase() + "npcs/final-revive.png").openConnection().getContentLength()>0){
+				npc.addArg("animationRevive", ImageIO.read(new URL(m.getCodeBase() + "npcs/final-revive.png")));
+			}
+			setNewNPCType(npc);
+		}
+		catch(Exception e){e.printStackTrace();}
+	}*/
 	
 	public void loadNPCTypes(){
 		int x = 1;
 		URL url;
+		boolean dothis=true;
 		try {
-			while(true){
+			while(dothis){
 				url = new URL(m.getCodeBase() + "npcs/" + x + ".cfg");
 				URLConnection con = url.openConnection();
-				if(con.getContentLength()<=0){break;}
+				if(con.getContentLength()<=0){
+					x=-1;
+					url = new URL(m.getCodeBase() + "npcs/" + x + ".cfg");
+					con = url.openConnection();
+					dothis=false;
+				}
 				byte[] b = new byte[con.getContentLength()];
 				con.getInputStream().read(b);
+				con.getInputStream().close();
 				String s = new String(b);
 				NPCType npc = new NPCType(m, x);
 				String key;
@@ -306,6 +580,18 @@ public class Game {
 				value = key.substring(find.length(), key.indexOf(";"));
 				npc.setAnimationDeathDuration( Integer.parseInt(value) ); }
 				////////////////////////////////////////////////////////
+				find = "perWave=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				npc.setPerWave( Integer.parseInt(value) ); }
+				////////////////////////////////////////////////////////
+				find = "bounty=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				npc.setBounty( Integer.parseInt(value) ); }
+				////////////////////////////////////////////////////////
 				find = "type=";
 				if(s.contains(find)){
 				key = s.substring( s.lastIndexOf(find) );
@@ -316,17 +602,38 @@ public class Game {
 				if(s.contains(find)){
 				key = s.substring( s.lastIndexOf(find) );
 				value = key.substring(find.length(), key.indexOf(";"));
-				npc.newArg( Integer.parseInt(value) ); }
+				npc.addArg( "reviveTimer", Integer.parseInt(value) ); }
+				////////////////////////////////////////////////////////
+				find = "animationReviveDuration=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				npc.addArg( "animationReviveDuration", Integer.parseInt(value) ); }
+				////////////////////////////////////////////////////////
+				find = "maxLife=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				npc.addArg( "maxLife", Integer.parseInt(value) ); }
+				////////////////////////////////////////////////////////
+				find = "increment=";
+				if(s.contains(find)){
+				key = s.substring( s.lastIndexOf(find) );
+				value = key.substring(find.length(), key.indexOf(";"));
+				npc.addArg( "increment", Double.parseDouble(value) ); }
 				////////////////////////////////////////////////////////
 				npc.setAnimationStand( ImageIO.read(new URL(m.getCodeBase() + "npcs/" + x + "-stand.png")) );
 				npc.setAnimationWalk( ImageIO.read(new URL(m.getCodeBase() + "npcs/" + x + "-walk.png")) );
 				npc.setAnimationDeath( ImageIO.read(new URL(m.getCodeBase() + "npcs/" + x + "-death.png")) );
+				if(new URL(m.getCodeBase() + "npcs/" + x + "-revive.png").openConnection().getContentLength()>0){
+					npc.addArg("animationRevive", ImageIO.read(new URL(m.getCodeBase() + "npcs/" + x + "-revive.png")));
+				}
 				setNewNPCType(npc);
 				x++;
 			}
 		}
 		catch (MalformedURLException e) {e.printStackTrace();}
-		catch (IOException e) {System.out.println("An Image couldn't be found.");}
+		catch (IOException e) {e.printStackTrace();/*System.out.println("An Image couldn't be found.");*/}
 		
 	}
 	
@@ -334,6 +641,32 @@ public class Game {
 		logicNPCs(delta);
 		logicTowers(delta);
 		logicProjectiles(delta);
+		logicOther(delta);
+	}
+	
+	public boolean isCursorInPlayingField () {
+		return m.mousePoint.x > 0 && m.mousePoint.x < m.width-getPanelWidth() && m.mousePoint.y > 0 && m.mousePoint.y < m.height-getPanelHeight();
+	}
+	
+	public void logicOther(int delta){
+		if(getLives()<=0){
+			m.renderMode = Main.RENDER_MODE_MENU;
+		}
+		if( isTowerSelected() ){
+			if(getTowerSelectedSprite() != null){
+				destroySprite(getTowerSelectedSprite());
+			}
+			BufferedImage img = getTowerSelectedImage();
+			if(isCursorInPlayingField()){
+				setTowerSelectedX((int)Math.floor( (m.mousePoint.x + offsetXF) / getTileWidth() ));
+				setTowerSelectedY((int)Math.floor( (m.mousePoint.y + offsetYF) / getTileWidth() ));
+				setTowerSelectedSprite(new Sprite(m, getTowerSelectedX()*getTileWidth()-(int)offsetXF, getTowerSelectedY()*getTileWidth()-(int)offsetYF, img, this, false));
+			}
+			else{
+				setTowerSelectedSprite(new Sprite(m, m.mousePoint.x-img.getWidth()/2, m.mousePoint.y-img.getHeight()/2, img, this, false));
+			}
+			setNewSprite(getTowerSelectedSprite());
+		}
 	}
 	
 	public void logicNPCs(int delta){
@@ -377,17 +710,6 @@ public class Game {
 		return done;
 	}
 	
-	public void loadMapTiles(){
-		for(int x=0;x<tiles.length;x++){
-			try {
-				URL url = new URL(m.getCodeBase() + "tiles/" + x + ".png");
-				tiles[x]=ImageIO.read(url);
-			}
-			catch (MalformedURLException e) {e.printStackTrace();} 
-			catch (IOException e) {e.printStackTrace();}
-		}
-	}
-	
 	public int getTile(int x, int y){
 		if(y>=0&&x>=0&&y<currentMap.getHeight()&&x<currentMap.getWidth()){
 			return currentMap.getData()[y*currentMap.getWidth()+x+4];
@@ -402,6 +724,7 @@ public class Game {
 		renderObjects(delta);
 		renderOverlay(delta);
 		renderMiniMap(delta);
+		renderAboveAll(delta);
 	}
 	
 	public void renderObjects(int delta){
@@ -418,11 +741,33 @@ public class Game {
 		}
 		
 		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
-			s.draw(g, (int)offsetXF, (int)offsetYF);
+			if( ! (s.getOwner() instanceof Button) &&
+				! (s.getOwner() instanceof Game) ){
+				s.draw(g, (int)offsetXF, (int)offsetYF);
+			}
 		}
 		
 		for( Animation a = getLastAnimation(); a != null; a = a.getPrevious() ){
 			a.draw(g, (int)offsetXF, (int)offsetYF, delta);
+		}
+		
+		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
+			g.setColor(Color.red);
+			g.fillRect((int) (npc.getX()-offsetXF),(int) (npc.getY()-offsetYF),50,10);
+			g.setColor(Color.cyan);
+			g.fillRect((int) (npc.getX()-offsetXF),(int) (npc.getY()-offsetYF),(int)((double)npc.getHealth()/npc.getMaxHealth()*50D),10);
+			g.setColor(Color.orange);
+			g.drawString(npc.getHealth() + "/" + npc.getMaxHealth(), (int) (npc.getX()-offsetXF)+10,(int) (npc.getY()-offsetYF)+9);
+		}
+	}
+	
+	public void renderAboveAll(int delta){
+		Graphics g = m.backbufferG;
+		
+		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+			if( s.getOwner() instanceof Game ){
+				s.draw(g, 0, 0);
+			}
 		}
 	}
 	
@@ -451,7 +796,20 @@ public class Game {
 			for(int x=offsetX<0?(offsetXTiles-1):(offsetXTiles);x<((offsetX>0)?(maxX+1):(maxX));x++){
 				int index = y*currentMap.getWidth()+x+4;
 				if(y<0||x<0||x>=currentMap.getWidth()||y>=currentMap.getHeight()){g.drawImage(black, (x-offsetXTiles)*tileWidth-offsetXMini, (y-offsetYTiles)*tileWidth-offsetYMini, m);}
-				else{g.drawImage(tiles[currentMap.getData()[index]], (x-offsetXTiles)*tileWidth-offsetXMini, (y-offsetYTiles)*tileWidth-offsetYMini, m);}
+				else{
+					//g.drawImage(tiles[currentMap.getData()[index]], (x-offsetXTiles)*tileWidth-offsetXMini, (y-offsetYTiles)*tileWidth-offsetYMini, m);
+					if(currentMap.getData()[index]==TILE_GRASS)
+						g.setColor(Color.green);
+					if(currentMap.getData()[index]==TILE_DIRT)
+						g.setColor(Color.orange);
+					if(currentMap.getData()[index]==TILE_SPAWN)
+						g.setColor(Color.orange);
+					if(currentMap.getData()[index]==TILE_GOAL)
+						g.setColor(Color.orange);
+					if(currentMap.getData()[index]==TILE_VOID)
+						g.setColor(Color.black);
+					g.fillRect((x-offsetXTiles)*tileWidth-offsetXMini, (y-offsetYTiles)*tileWidth-offsetYMini, tileWidth, tileWidth);
+				}
 			}
 			}
 		}
@@ -463,6 +821,22 @@ public class Game {
 		g.setColor(Color.darkGray);
 		g.fillRect(m.width-panelWidth, 0, panelWidth, m.height);
 		g.fillRect(0, m.height-panelHeight, m.width, panelHeight);
+		
+		g.setColor(Color.white);
+		g.drawString("Money: " + money, m.width-panelWidth, panelWidth+getMarginMinimap()*2);
+		g.drawString("Lives: " + lives, m.width-panelWidth+75, panelWidth+getMarginMinimap()*2);
+		g.drawString("Next Wave: " + nextWave.getTime()/1000 + "s", getMarginMinimap()*2, m.height-panelHeight+getMarginMinimap()*2);
+		g.drawString(getStatus(), marginMinimap*2, m.height-marginMinimap*4);
+		
+		for(Button b = getLastButton();b!=null;b=b.getPrevious()){
+			b.drawLogic();
+		}
+		
+		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+			if( s.getOwner() instanceof Button ){
+				s.draw(g, -m.width+panelWidth, -panelWidth-getMarginMinimap()*3);
+			}
+		}
 	}
 	
 	public void renderMiniMap(int delta){
@@ -471,7 +845,18 @@ public class Game {
 		for(int y=0;y<currentMap.getHeight();y++){
 		for(int x=0;x<currentMap.getWidth();x++){
 			int index = y*currentMap.getWidth()+x+4;
-			g.drawImage(tiles[currentMap.getData()[index]], x*tileWidth, y*tileWidth, (x+1)*tileWidth, (y+1)*tileWidth, 0, 0, tiles[currentMap.getData()[index]].getWidth(), tiles[currentMap.getData()[index]].getHeight(), m);
+			if(currentMap.getData()[index]==TILE_GRASS)
+				g.setColor(Color.green);
+			if(currentMap.getData()[index]==TILE_DIRT)
+				g.setColor(Color.orange);
+			if(currentMap.getData()[index]==TILE_SPAWN)
+				g.setColor(Color.orange);
+			if(currentMap.getData()[index]==TILE_GOAL)
+				g.setColor(Color.orange);
+			if(currentMap.getData()[index]==TILE_VOID)
+				g.setColor(Color.black);
+			g.fillRect(x*tileWidth, y*tileWidth, tileWidth, tileWidth);
+			//g.drawImage(tiles[currentMap.getData()[index]], x*tileWidth, y*tileWidth, (x+1)*tileWidth, (y+1)*tileWidth, 0, 0, tiles[currentMap.getData()[index]].getWidth(), tiles[currentMap.getData()[index]].getHeight(), m);
 		}
 		}
 		
@@ -484,13 +869,13 @@ public class Game {
 			g.fillRect( (int)(tower.getX()), (int)(tower.getY()), getTileWidth(), getTileWidth() );
 		}
 		
-		m.backbufferG.drawImage(minimap, m.width-panelWidth+marginMinimap, marginMinimap, m.width-marginMinimap, panelWidth-marginMinimap,
+		m.backbufferG.drawImage(minimap, m.width-panelWidth+getMarginMinimap(), getMarginMinimap(), m.width-getMarginMinimap(), panelWidth-getMarginMinimap(),
 				0, 0, mapGraphicWidth, mapGraphicHeight, m);
 		m.backbufferG.setColor(Color.white);
-		int minimapWidth = panelWidth-marginMinimap*2;
+		int minimapWidth = panelWidth-getMarginMinimap()*2;
 		double modifierX = (double)minimapWidth/mapGraphicWidth;
 		double modifierY = (double)minimapWidth/mapGraphicHeight;
-		m.backbufferG.drawRect(m.width - panelWidth + marginMinimap + (int)(offsetXF*modifierX), marginMinimap + (int)(offsetYF*modifierY),(int)((double)(m.width-panelWidth)*modifierX),(int)((double)(m.height-panelHeight)*modifierY));
+		m.backbufferG.drawRect(m.width - panelWidth + getMarginMinimap() + (int)(offsetXF*modifierX), getMarginMinimap() + (int)(offsetYF*modifierY),(int)((double)(m.width-panelWidth)*modifierX),(int)((double)(m.height-panelHeight)*modifierY));
 	}
 	
 	public String printMap(int x, int y){
@@ -511,22 +896,76 @@ public class Game {
 		//2 - Middle Click
 		//3 - Right Click
 		if(m.mouseDown[1]){
-			if(m.mouseStart.x>=m.width-panelWidth+marginMinimap&&
-				m.mouseStart.x<=m.width-marginMinimap&&
-				m.mouseStart.y>=marginMinimap&&
-				m.mouseStart.y<=panelWidth-marginMinimap)
+			
+			if(isTowerSelected()){
+				if(isCursorInPlayingField()){
+					if( isBuildable(getTile(getTowerSelectedX(), getTowerSelectedY())) &&
+						!isTowerOn(getTowerSelectedX(), getTowerSelectedY()) ){
+						deselectTower(false);
+						createTower ( getTowerSelectedTowerType() ).setX(getTowerSelectedX()*getTileWidth()).setY(getTowerSelectedY()*getTileWidth());
+					}
+				}
+				else{
+					deselectTower(true);
+				}
+			}
+			
+			if(m.mouseStart.x>=m.width-panelWidth+getMarginMinimap()&&
+				m.mouseStart.x<=m.width-getMarginMinimap()&&
+				m.mouseStart.y>=getMarginMinimap()&&
+				m.mouseStart.y<=panelWidth-getMarginMinimap())
 			{
-				offsetXF = (m.mousePoint.x-m.width+panelWidth-marginMinimap //X relative to the minimap
-						-0.5f*(m.width-panelWidth)/(double)mapGraphicWidth*(panelWidth-marginMinimap*2)) //Drag the center of the minimap square
-						*(m.width/(double)(panelWidth-marginMinimap*2)); //How many times bigger is the main screen than the minimap
+				offsetXF = (m.mousePoint.x-m.width+panelWidth-getMarginMinimap()
+						-0.5f*(m.width-panelWidth)/(double)mapGraphicWidth*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
+						*(mapGraphicWidth/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
 				if(offsetXF>=maxOffsetX){offsetXF=maxOffsetX;}
 				if(offsetXF<=0){offsetXF=0;}
 				
-				offsetYF = (m.mousePoint.y-marginMinimap //Y relative to the minimap
-						-0.5f*(m.height-panelHeight)/(double)mapGraphicHeight*(panelWidth-marginMinimap*2)) //Drag the center of the minimap square
-						*(m.height/(double)(panelWidth-marginMinimap*2)); //How many times bigger is the main screen than the minimap
+				offsetYF = (m.mousePoint.y-getMarginMinimap()
+						-0.5f*(m.height-panelHeight)/(double)mapGraphicHeight*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
+						*(mapGraphicHeight/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
 				if(offsetYF>=maxOffsetY){offsetYF=maxOffsetY;}
 				if(offsetYF<=0){offsetYF=0;}
+			}
+			
+			for(Button b = getLastButton();b!=null;b=b.getPrevious()){
+				b.click(m.mousePoint.x, m.mousePoint.y);
+			}
+		}
+		
+		else{
+			if(getTooltip()!=null){
+				destroySprite(getTooltip());
+				setTooltip(null);
+			}
+			for(Button b = getLastButton();b!=null;b=b.getPrevious()){
+				if(b.isHere(m.mousePoint.x, m.mousePoint.y)){
+					BufferedImage img = new BufferedImage(getPanelWidth()-marginMinimap*2, getPanelHeight()-marginMinimap*2, BufferedImage.TYPE_INT_ARGB);
+					Graphics g = img.getGraphics();
+					g.setColor(Color.yellow);
+					g.fillRect(0, 0, getPanelWidth()-marginMinimap*2, getPanelWidth()-marginMinimap*2);
+					g.setColor(Color.black);
+					g.drawRect(0, 0, getPanelWidth()-marginMinimap*2, getPanelWidth()-marginMinimap*2);
+					g.setFont(new Font("monospaced", Font.PLAIN, getPanelWidth()/10));
+					int y = 2;
+					int x = 2;
+					for (String line : b.getDes().split("\n")){
+						y += g.getFontMetrics().getHeight();
+						x = 2;
+						for(String command : line.split("%")){
+							if(command.startsWith("FontSize:")){
+								g.setFont(new Font(g.getFont().getFontName(), g.getFont().getStyle(), Integer.parseInt(command.substring(command.indexOf(":")+1))));
+							}
+							else{
+								g.drawString(command, x, y);
+								x+=command.length()*g.getFontMetrics().getWidths()[0];
+							}
+						}
+					}
+					g.dispose();
+					setTooltip(new Sprite(m, m.width-getPanelWidth()+marginMinimap, m.height-getPanelHeight()+marginMinimap, img, this, false));
+					setNewSprite(getTooltip());
+				}
 			}
 		}
 		
@@ -548,9 +987,29 @@ public class Game {
 		}
 	}
 	
+	private boolean isTowerOn(int x, int y) {
+		for(Tower t = getLastTower();t!=null;t = t.getPrevious()){
+			if(t.getX() / getTileWidth() == x &&
+			   t.getY() / getTileWidth() == y){
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public static boolean isPassable(int tileid){
 		if(tileid>=0&&tileid<=passable.length()){
 		if(passable.toCharArray()[tileid]=='1'){
+			return true;
+		}
+		else{return false;}
+		}
+		else{return false;}
+	}
+	
+	public static boolean isBuildable(int tileid){
+		if(tileid>=0&&tileid<=buildable.length()){
+		if(buildable.toCharArray()[tileid]=='1'){
 			return true;
 		}
 		else{return false;}
@@ -634,6 +1093,7 @@ public class Game {
 		}
 		if(s.getPrevious()!=null){s.getPrevious().setNext(s.getNext());}
 		if(s.getNext()!=null){s.getNext().setPrevious(s.getPrevious());}
+		s.setImage(null);
 	}
 	
 	public void setNewTower(Tower t){
@@ -671,6 +1131,7 @@ public class Game {
 		}
 		if(a.getPrevious()!=null){a.getPrevious().setNext(a.getNext());}
 		if(a.getNext()!=null){a.getNext().setPrevious(a.getPrevious());}
+		a.setImage(null);
 	}
 
 	public void setNewTowerType(TowerType t){
@@ -797,7 +1258,15 @@ public class Game {
 		String type = npcType.getType();
 		NPC npc;
 		if( type.equals("revive") ){
-			NPC npco = new NPCRevive(m,0,0,npcType,(Integer) npcType.getArgs()[0]);
+			NPC npco = new NPCRevive(m,0,0,npcType,
+					(Integer) npcType.getArg("reviveTimer"),
+					(BufferedImage)npcType.getArg("animationRevive"),
+					(Integer)npcType.getArg("animationReviveDuration"));
+			setNewNPC(npco);
+			npc = npco;
+		}
+		else if( type.equals("final") ){
+			NPC npco = new NPCFinal(m,0,0,npcType,getFinalsSpawned());
 			setNewNPC(npco);
 			npc = npco;
 		}
@@ -809,5 +1278,180 @@ public class Game {
 		npc.copyFromNPC(npcType);
 		
 		return npc;
+	}
+	
+	public void destroyButton(Button b){
+		if(getLastButton().equals(b)){
+			setLastButton(b.getPrevious());
+		}
+		if(b.getPrevious()!=null){b.getPrevious().setNext(b.getNext());}
+		if(b.getNext()!=null){b.getNext().setPrevious(b.getPrevious());}
+	}
+	
+	public void setNewButton(Button b){
+		if(getLastButton()!=null){
+			getLastButton().setNext(b);
+			b.setPrevious(getLastButton());
+		}
+		setLastButton(b);
+	}
+
+	public Button getLastButton() {
+		return lastButton;
+	}
+
+	public void setLastButton(Button lastButton) {
+		this.lastButton = lastButton;
+	}
+	
+	public int getPanelWidth() {
+		return panelWidth;
+	}
+
+	public void setPanelWidth(int panelWidth) {
+		this.panelWidth = panelWidth;
+	}
+
+	public int getPanelHeight() {
+		return panelHeight;
+	}
+
+	public void setPanelHeight(int panelHeight) {
+		this.panelHeight = panelHeight;
+	}
+
+	public boolean isTowerSelected() {
+		return towerSelected;
+	}
+
+	public void setTowerSelected(boolean towerSelected) {
+		this.towerSelected = towerSelected;
+	}
+
+	public Sprite getTowerSelectedSprite() {
+		return towerSelectedSprite;
+	}
+
+	public void setTowerSelectedSprite(Sprite towerSelectedSprite) {
+		this.towerSelectedSprite = towerSelectedSprite;
+	}
+
+	public BufferedImage getTowerSelectedImage() {
+		return towerSelectedImage;
+	}
+
+	public void setTowerSelectedImage(BufferedImage towerSelectedImage) {
+		this.towerSelectedImage = towerSelectedImage;
+	}
+
+	public int getTowerSelectedX() {
+		return towerSelectedX;
+	}
+
+	public void setTowerSelectedX(int towerSelectedX) {
+		this.towerSelectedX = towerSelectedX;
+	}
+
+	public int getTowerSelectedY() {
+		return towerSelectedY;
+	}
+
+	public void setTowerSelectedY(int towerSelectedY) {
+		this.towerSelectedY = towerSelectedY;
+	}
+
+	public TowerType getTowerSelectedTowerType() {
+		return towerSelectedTowerType;
+	}
+
+	public void setTowerSelectedTowerType(TowerType towerSelectedTowerType) {
+		this.towerSelectedTowerType = towerSelectedTowerType;
+	}
+
+	public int getMoney() {
+		return money;
+	}
+
+	public void setMoney(int money) {
+		this.money = money;
+	}
+
+	public int getMarginMinimap() {
+		return marginMinimap;
+	}
+
+	public void setMarginMinimap(int marginMinimap) {
+		this.marginMinimap = marginMinimap;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status, String oldStatus) {
+		if(getStatus().equals(oldStatus)){
+			this.status = status;
+		}
+	}
+	
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public int getLives() {
+		return lives;
+	}
+
+	public void setLives(int lives) {
+		this.lives = lives;
+	}
+
+	public Sprite getTooltip() {
+		return tooltip;
+	}
+
+	public void setTooltip(Sprite tooltip) {
+		this.tooltip = tooltip;
+	}
+
+	public int getFinalsSpawned() {
+		return finalsSpawned;
+	}
+
+	public void setFinalsSpawned(int finalsSpawned) {
+		this.finalsSpawned = finalsSpawned;
+	}
+
+	public Event getNextWave() {
+		return nextWave;
+	}
+
+	public void setNextWave(Event nextWave) {
+		this.nextWave = nextWave;
+	}
+
+	public int getWaveId() {
+		return waveId;
+	}
+
+	public void setWaveId(int waveId) {
+		this.waveId = waveId;
+	}
+
+	public int getFinalsKilled() {
+		return finalsKilled;
+	}
+
+	public void setFinalsKilled(int finalsKilled) {
+		setAdditionalStatus("Finals killed: " + finalsKilled);
+		this.finalsKilled = finalsKilled;
+	}
+
+	public String getAdditionalStatus() {
+		return additionalStatus;
+	}
+
+	public void setAdditionalStatus(String additionalStatus) {
+		this.additionalStatus = additionalStatus;
 	}
 }

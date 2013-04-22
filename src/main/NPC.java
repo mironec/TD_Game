@@ -103,6 +103,13 @@ public class NPC {
 	
 	public void logic (int delta) {
 		additionalLogic(delta);
+		if(getX()/m.getGame().getTileWidth()==m.getGame().findGoal().x&&
+		   getY()/m.getGame().getTileWidth()==m.getGame().findGoal().y){
+			m.getGame().setLives(m.getGame().getLives()-1);
+			m.getGame().destroySprite(getSprite());
+			m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()).setOrientation(getOrientation()*90));
+			m.getGame().destroyNPC(this);
+		}
 		if(getCommand()==NPC.COMMAND_MOVE){
 			goToTarget(delta);
 		}
@@ -135,9 +142,8 @@ public class NPC {
 			{}
 			else{
 				m.getGame().destroySprite(getSprite());
-				Sprite s = new Sprite(m, (int)getX(), (int)getY(), Game.rotate(Animation.getImagePhase(animation,phase,m),orientation*90), this, false);
-				m.getGame().setNewSprite(s);
-				setSprite(s);
+				setSprite(new Sprite(m, (int)getX(), (int)getY(), Game.rotate(Animation.getImagePhase(animation,phase,m),orientation*90), this, false));
+				m.getGame().setNewSprite(getSprite());
 			}
 		}
 	}
@@ -150,9 +156,19 @@ public class NPC {
 	}
 	
 	public void die(){
+		onDeath();
+		destroy();
+		m.getGame().setMoney(m.getGame().getMoney()+getNPCType().getBounty());
+	}
+	
+	public void onDeath(){
+		
+	}
+	
+	public void destroy(){
 		m.getGame().destroySprite(getSprite());
+		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()).setOrientation(orientation*90));
 		m.getGame().destroyNPC(this);
-		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), Game.rotate(getAnimationDeath(),orientation*90), this, false, getAnimationDeathDuration()));
 	}
 	
 	public ArrayList<Point> findPath(int x, int y, ArrayList<Point> beenTo, ArrayList<Point> path, int tx, int ty) {
@@ -162,7 +178,7 @@ public class NPC {
 		
 		beenTo.add(new Point(x,y));
 		path.add(new Point(x,y));
-		
+				
 		if(x==tx&&y==ty){
 			return path;
 		}
@@ -230,50 +246,58 @@ public class NPC {
 		if(path==null||path.isEmpty()){
 			path = findPath(tileX, tileY, new ArrayList<Point>(),new ArrayList<Point>(), targetX, targetY);
 			pathIndex=1;
+			wait=0;
+		}
+		if(wait<=0){
+			setAnimation(ANIMATION_WALK);
+			if(tileX==targetX&&tileY==targetY){
+				command = COMMAND_NOTHING;
+				setAnimation(ANIMATION_STAND);
+				return;
+			}
+			
+			x=tileX*m.getGame().getTileWidth();
+			y=tileY*m.getGame().getTileWidth();
+			
+			if(tileX<path.get(pathIndex).x){orientation = ORIENTATION_EAST;}
+			if(tileY>path.get(pathIndex).y){orientation = ORIENTATION_NORTH;}
+			if(tileX>path.get(pathIndex).x){orientation = ORIENTATION_WEST;}
+			if(tileY<path.get(pathIndex).y){orientation = ORIENTATION_SOUTH;}
+			
+			tileX = path.get(pathIndex).x;
+			tileY = path.get(pathIndex).y;
+			
+			
+			pathIndex++;
+			
+			int intWait = 0;
+			if(wait<0)
+				intWait=-wait;
+			
+			wait = (int) (1000/getMovementSpeed());
+			if(intWait>0)
+				goToTarget(intWait);
 		}
 		else{
-			for(int loop=0;loop<delta;loop++){
-				if(wait==0){
-					setAnimation(ANIMATION_WALK);
-					if(tileX==targetX&&tileY==targetY){
-						command = COMMAND_NOTHING;
-						setAnimation(ANIMATION_STAND);
-						return;
-					}
-					
-					x=tileX*m.getGame().getTileWidth();
-					y=tileY*m.getGame().getTileWidth();
-					
-					if(tileX<path.get(pathIndex).x){orientation = ORIENTATION_EAST;}
-					if(tileY>path.get(pathIndex).y){orientation = ORIENTATION_NORTH;}
-					if(tileX>path.get(pathIndex).x){orientation = ORIENTATION_WEST;}
-					if(tileY<path.get(pathIndex).y){orientation = ORIENTATION_SOUTH;}
-					
-					tileX = path.get(pathIndex).x;
-					tileY = path.get(pathIndex).y;
-					
-					
-					pathIndex++;
-					
-					wait = (int) (1000/getMovementSpeed());
-				}
-				else{
-					if(tileX*m.getGame().getTileWidth()>x){
-						x=((double)tileX-(double)wait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-					}
-					if(tileX*m.getGame().getTileWidth()<x){
-						x=((double)tileX+(double)wait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-					}
-					if(tileY*m.getGame().getTileWidth()>y){
-						y=((double)tileY-(double)wait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-					}
-					if(tileY*m.getGame().getTileWidth()<y){
-						y=((double)tileY+(double)wait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-					}
-					
-					wait--;
-				}
+			wait-=delta;
+			int intWait = wait;
+			
+			if(wait<=0){intWait=0;}
+			
+			if(tileX*m.getGame().getTileWidth()>x){
+				x=((double)tileX-(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
 			}
+			if(tileX*m.getGame().getTileWidth()<x){
+				x=((double)tileX+(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
+			}
+			if(tileY*m.getGame().getTileWidth()>y){
+				y=((double)tileY-(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
+			}
+			if(tileY*m.getGame().getTileWidth()<y){
+				y=((double)tileY+(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
+			}
+			
+			if(wait<=0){goToTarget(-wait);}
 		}
 	}
 

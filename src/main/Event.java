@@ -7,6 +7,7 @@ public abstract class Event {
 	private int time; 		//in ms
 	private int delay;		//in ms
 	private int repeat;
+
 	private Main m;
 	
 	public Event (Main m, int delay, int repeat) {
@@ -20,13 +21,13 @@ public abstract class Event {
 		time-=delta;
 		
 		if(time<=0){
-			run(); repeat--;
-			if(repeat != 0){time = delay;}//+time;}
+			run(-time); repeat--;
+			if(repeat != 0){time = delay+time;}
 			else{m.destroyEvent(this);}
 		}
 	}
 	
-	public abstract void run ();
+	public abstract void run (int delta);
 
 	public Event getPrevious() {
 		return previous;
@@ -42,5 +43,13 @@ public abstract class Event {
 
 	public void setNext(Event next) {
 		this.next = next;
+	}
+	
+	public int getTime() {
+		return time;
+	}
+
+	public void setTime(int time) {
+		this.time = time;
 	}
 }
