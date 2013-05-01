@@ -112,6 +112,37 @@ public class Tower {
 			}
 		}
 	}
+	
+	public void sell(){
+		destroy();
+		int ret = 0;
+		for(TowerType t = getTowerType();t!=null;t=t.getBase()){
+			ret += t.getCost();
+		}
+		m.getGame().setMoney(m.getGame().getMoney() + ret);
+	}
+	
+	public void upgradeTo(TowerType t){
+		if(m.getGame().getMoney()>=t.getCost()){
+			m.getGame().setMoney(m.getGame().getMoney()-t.getCost());
+			Tower t2 = m.getGame().createTower(t);
+			t2.setX(getX());
+			t2.setY(getY());
+			destroy();
+		}
+		else{
+			m.getGame().setStatus("Not enough money!");
+			m.setNewEvent(new Event(m, 2000, 1) {
+				public void run(int delta) {
+					m.getGame().setStatus("","Not enough money!");
+				}
+			});
+		}
+	}
+	
+	public void destroy(){
+		m.getGame().destroyTower(this);
+	}
 
 	public double getAttackSpeed() {
 		return attackSpeed;

@@ -12,14 +12,16 @@ public abstract class Button {
 	private Button previous;
 	private Button next;
 	private String des = "";
+	private Object owner;
 	
-	public Button(Main m, int x, int y, int width, int height, BufferedImage img){
+	public Button(Main m, int x, int y, int width, int height, BufferedImage img, Object owner){
 		this.m = m;
 		this.x = x;
 		this.y = y;
 		this.width = width;
 		this.height = height;
 		this.img = img;
+		this.owner = owner;
 	}
 
 	public abstract void run();
@@ -36,6 +38,13 @@ public abstract class Button {
 				m.getGame().setNewSprite(getSprite());
 			}
 		}
+	}
+	
+	public void destroy(){
+		m.getGame().destroyButton(this);
+		if(getSprite()!=null)
+			m.getGame().destroySprite(getSprite());
+		setSprite(null);
 	}
 	
 	public int getX() {
@@ -71,10 +80,10 @@ public abstract class Button {
 	}
 
 	public boolean isHere(int x, int y){
-		int offsetX = m.getWidth()-m.getGame().getPanelWidth();
-		int offsetY = m.getGame().getPanelWidth()+m.getGame().getMarginMinimap()*3;
-		if( x>=getX()+offsetX && x<=getX()+getWidth()+offsetX &&
-			y>=getY()+offsetY && y<=getY()+getHeight()+offsetY ){
+		//int offsetX = m.getWidth()-m.getGame().getPanelWidth();
+		//int offsetY = m.getGame().getPanelWidth()+m.getGame().getMarginMinimap()*3;
+		if( x>=getX() && x<=getX()+getWidth() &&
+			y>=getY() && y<=getY()+getHeight() ){
 			return true;
 		}
 		return false;
@@ -124,5 +133,13 @@ public abstract class Button {
 
 	public void setDes(String des) {
 		this.des = des;
+	}
+
+	public Object getOwner() {
+		return owner;
+	}
+
+	public void setOwner(Object owner) {
+		this.owner = owner;
 	}
 }

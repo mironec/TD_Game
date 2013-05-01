@@ -1,12 +1,10 @@
 package main;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 
 import javax.imageio.ImageIO;
 
@@ -34,23 +32,21 @@ public class Map {
 		map = mapname;
 		if(method==METHOD_LOAD_FILE){
 			try {
-				URL url = new URL(m.getCodeBase().toString() + "maps/" + mapname);
+				InputStream is = Main.class.getResourceAsStream(Game.RES_DIR + "maps/" + mapname);
 				
-				URLConnection conn = url.openConnection();
-				byte[] ret = new byte[conn.getContentLength()];
-				BufferedInputStream in = new BufferedInputStream(url.openStream());
+				byte[] ret = new byte[Map.class.getResource(Game.RES_DIR + "maps/" + mapname).openConnection().getContentLength()];
 				ByteArrayOutputStream out = new ByteArrayOutputStream();
 				
 				byte data[] = new byte[1024];
 				int count;
 				
-				while ((count = in.read(data, 0, 1024)) != -1) {
+				while ((count = is.read(data, 0, 1024)) != -1) {
 					out.write(data, 0, count);
 				}
 				
 				ret = out.toByteArray();
 				
-			    in.close();
+			    is.close();
 			    out.close();
 			    
 			    readMap(ret);
@@ -79,9 +75,9 @@ public class Map {
 	
 	public void loadImage(){
 		try {
-			URL url = new URL(m.getCodeBase().toString() + "mapImages/" + map.substring(0,map.lastIndexOf('.')) + ".png");
-			if(url.openConnection().getContentLength()>0){
-				BufferedImage img = ImageIO.read(url);
+			InputStream is = Main.class.getResourceAsStream(Game.RES_DIR + "mapImages/" + map.substring(0,map.lastIndexOf('.')) + ".png");
+			if(is!=null){
+				BufferedImage img = ImageIO.read(is);
 				image = new BufferedImage(getWidth()*m.getGame().getTileWidth(),getHeight()*m.getGame().getTileWidth(),BufferedImage.TYPE_INT_ARGB);
 				image.getGraphics().drawImage(img, 0, 0, 
 						getWidth()*m.getGame().getTileWidth(), getHeight()*m.getGame().getTileWidth(),

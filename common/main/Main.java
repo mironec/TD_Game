@@ -20,7 +20,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 15L;
+	private static final long serialVersionUID = 19L;
 	
 	public static final int RENDER_MODE_MENU = 0;
 	public static final int RENDER_MODE_GAME = 1;
@@ -131,7 +131,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 				
 				double now = System.nanoTime();
 			    
-			    if (!paused){
+			    if (!isPaused()){
 		    		logic((int) ((now - lastUpdateTime)/1000/1000));
 		    		events((int) ((now - lastUpdateTime)/1000/1000));
 					handleInput((int) ((now - lastUpdateTime)/1000/1000));
@@ -195,7 +195,14 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		keyDown[e.getKeyCode()]=false;
 	}
 
-	public void keyTyped(KeyEvent e) {}
+	public void keyTyped(KeyEvent e) {
+		if(e.getKeyChar()=='p'){
+			double now = System.nanoTime();
+			lastUpdateTime = now;
+			lastRenderTime = now;
+			paused =! paused;
+		}
+	}
 
 	public void mouseClicked(MouseEvent e) {}
 
@@ -254,5 +261,13 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		}
 		if(e.getPrevious()!=null){e.getPrevious().setNext(e.getNext());}
 		if(e.getNext()!=null){e.getNext().setPrevious(e.getPrevious());}
+	}
+
+	public boolean isPaused() {
+		return paused;
+	}
+
+	public void setPaused(boolean paused) {
+		this.paused = paused;
 	}
 }

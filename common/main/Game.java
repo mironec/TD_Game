@@ -10,9 +10,9 @@ import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 
@@ -62,17 +62,19 @@ public class Game {
 	private BufferedImage towerSelectedImage;
 	private TowerType towerSelectedTowerType;
 	
-	private int money = 30;
+	private int money = 50;
 	private int lives = 40;
 	private Sprite tooltip;
 	private String status = "";
-	//private String nextWaveStatus = "";
 	private String additionalStatus = "";
 	private int finalsSpawned=0;
 	private int finalsKilled=0;
 	private Event nextWave;
+	private BufferedImage imageSell;
+	public static final String RES_DIR = "/res/";
+	public static final String BUTTON_SELL_DESC = "Sell\n%FontSize:11%Sells the tower\nfor 100 percent\nof invested money";
 	
-	private int waveId = 1;
+	private int waveId = 2;
 	
 	public Game (Main m) {
 		black = new BufferedImage(tileWidth, tileWidth, BufferedImage.TYPE_INT_ARGB);
@@ -95,20 +97,27 @@ public class Game {
 		
 		loadTowerTypes();
 		loadNPCTypes();
+		loadAdditional();
 		prepareButtons();
 		
 		resizeImages();
 		
-		//setStatus("Time to next wave: 5 seconds");
 		nextWave = new Event(m,5000,1){
 			public void run(int delta){
 				spawnWave(findNPCTypeById(waveId+1).getPerWave(),1000);
 			}
 		};
-				
+		
 		m.setNewEvent(nextWave);
+		
 	}
 	
+	private void loadAdditional() {
+		try {imageSell = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "additional/sell.png"));}
+		catch (MalformedURLException e) {e.printStackTrace();}
+		catch (IOException e) {e.printStackTrace();}
+	}
+
 	public void spawnWave(int number, int delays){
 		
 		setWaveId(getWaveId()+1);
@@ -191,14 +200,14 @@ public class Game {
 	}
 	
 	public void prepareButtons(){
-		int posX = getMarginMinimap()*2;
-		int posY = getMarginMinimap()*2;
+		int posX = m.width-panelWidth+getMarginMinimap()*2;
+		int posY = panelWidth+getMarginMinimap()*5;
 		
 		for(TowerType t = getLastTowerType();t!=null;t=t.getPrevious()){
 			if(t.getBase() == null){									//The Tower is not an upgrade from another Tower
 				final int id = t.getId();
 				Button b = new Button(m, posX, posY, getPanelWidth()/4, getPanelWidth()/4,
-						resize(Animation.getImagePhase(t.getAnimationStand(), 0, m),getPanelWidth()/4,getPanelWidth()/4) ) {
+						resize(Animation.getImagePhase(t.getAnimationStand(), 0, m),getPanelWidth()/4,getPanelWidth()/4), this ) {
 					public void run() {
 						selectTower( findTowerTypeById(id) );
 					}
@@ -207,7 +216,7 @@ public class Game {
 				setNewButton(b);
 				
 				posX += getPanelWidth()/4 + getMarginMinimap();
-				if(posX>=getPanelWidth()){
+				if(posX>=m.width-panelWidth+getMarginMinimap()*2 + getPanelWidth()){
 					posX = getMarginMinimap()*2;
 					posY += getPanelWidth()/4 + getMarginMinimap();
 				}
@@ -247,17 +256,17 @@ public class Game {
 		try {
 		BufferedImage img;
 		for(NPCType npc = getLastNPCType();npc!=null;npc=npc.getPrevious()){
-			img = ImageIO.read(new URL(m.getCodeBase() + "npcs/" + npc.getId() + "-death.png"));
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + npc.getId() + "-death.png"));
 			npc.setAnimationDeath( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			
-			img = ImageIO.read(new URL(m.getCodeBase() + "npcs/" + npc.getId() + "-stand.png"));
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + npc.getId() + "-stand.png"));
 			npc.setAnimationStand( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			
-			img = ImageIO.read(new URL(m.getCodeBase() + "npcs/" + npc.getId() + "-walk.png"));
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + npc.getId() + "-walk.png"));
 			npc.setAnimationWalk( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			
 			if(npc.getArg("animationRevive")!=null){
-				img = ImageIO.read(new URL(m.getCodeBase() + "npcs/" + npc.getId() + "-revive.png"));
+				img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + npc.getId() + "-revive.png"));
 				npc.addArg( "animationRevive", resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			}
 		}
@@ -270,22 +279,25 @@ public class Game {
 		}
 		
 		for(TowerType t = getLastTowerType();t!=null;t=t.getPrevious()){
-			img = ImageIO.read(new URL(m.getCodeBase() + "towers/" + t.getId() + "-attack.png"));
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-attack.png"));
 			t.setAnimationAttack( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			
-			img = ImageIO.read(new URL(m.getCodeBase() + "towers/" + t.getId() + "-stand.png"));
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-stand.png"));
 			t.setAnimationStand( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			
-			img = ImageIO.read(new URL(m.getCodeBase() + "towers/" + t.getId() + "-projectileStand.png"));
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-projectileStand.png"));
 			t.setProjectileAnimationStand( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			
-			img = ImageIO.read(new URL(m.getCodeBase() + "towers/" + t.getId() + "-projectileDeath.png"));
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-projectileDeath.png"));
 			t.setProjectileAnimationDeath( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 		}
 		for(Tower t = getLastTower();t!=null;t=t.getPrevious()){
 			t.setAnimationAttack(t.getTowerType().getAnimationAttack());
 			t.setAnimationStand(t.getTowerType().getAnimationStand());
 		}
+		
+		img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "additional/sell.png"));
+		imageSell = resize(img,getTileWidth(),getTileWidth());
 		
 		}
 		catch (MalformedURLException e) {e.printStackTrace(); /*System.out.println("An Image couldn't be found.");*/} 
@@ -337,15 +349,13 @@ public class Game {
 	
 	public void loadTowerTypes(){
 		int x = 1;
-		URL url;
 		try {
 			while(true){
-				url = new URL(m.getCodeBase() + "towers/" + x + ".cfg");
-				URLConnection con = url.openConnection();
-				if(con.getContentLength()<=0){break;}
-				byte[] b = new byte[con.getContentLength()];
-				con.getInputStream().read(b);
-				con.getInputStream().close();
+				InputStream is = Main.class.getResourceAsStream(RES_DIR + "towers/" + x + ".cfg");
+				if(is==null){break;}
+				byte[] b = new byte[Main.class.getResource(RES_DIR + "towers/" + x + ".cfg").openConnection().getContentLength()];
+				is.read(b);
+				is.close();
 				String s = new String(b);
 				TowerType t = new TowerType(m, x);
 				String key;
@@ -430,10 +440,10 @@ public class Game {
 				value = key.substring(find.length(), key.indexOf(";"));
 				t.newArg( Integer.parseInt(value) );}
 				////////////////////////////////////////////////////////
-				t.setAnimationStand( ImageIO.read(new URL(m.getCodeBase() + "towers/" + x + "-stand.png")) );
-				t.setAnimationAttack( ImageIO.read(new URL(m.getCodeBase() + "towers/" + x + "-attack.png")) );
-				t.setProjectileAnimationStand( ImageIO.read(new URL(m.getCodeBase() + "towers/" + x + "-projectileStand.png")) );
-				t.setProjectileAnimationDeath( ImageIO.read(new URL(m.getCodeBase() + "towers/" + x + "-projectileDeath.png")) );
+				t.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-stand.png")) );
+				t.setAnimationAttack( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-attack.png")) );
+				t.setProjectileAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-projectileStand.png")) );
+				t.setProjectileAnimationDeath( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-projectileDeath.png")) );
 				setNewTowerType(t);
 				x++;
 			}
@@ -529,21 +539,18 @@ public class Game {
 	
 	public void loadNPCTypes(){
 		int x = 1;
-		URL url;
 		boolean dothis=true;
 		try {
 			while(dothis){
-				url = new URL(m.getCodeBase() + "npcs/" + x + ".cfg");
-				URLConnection con = url.openConnection();
-				if(con.getContentLength()<=0){
+				InputStream is = Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + ".cfg");
+				if(is==null){
 					x=-1;
-					url = new URL(m.getCodeBase() + "npcs/" + x + ".cfg");
-					con = url.openConnection();
+					is = Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + ".cfg");
 					dothis=false;
 				}
-				byte[] b = new byte[con.getContentLength()];
-				con.getInputStream().read(b);
-				con.getInputStream().close();
+				byte[] b = new byte[Main.class.getResource(RES_DIR + "npcs/" + x + ".cfg").openConnection().getContentLength()];
+				is.read(b);
+				is.close();
 				String s = new String(b);
 				NPCType npc = new NPCType(m, x);
 				String key;
@@ -622,11 +629,11 @@ public class Game {
 				value = key.substring(find.length(), key.indexOf(";"));
 				npc.addArg( "increment", Double.parseDouble(value) ); }
 				////////////////////////////////////////////////////////
-				npc.setAnimationStand( ImageIO.read(new URL(m.getCodeBase() + "npcs/" + x + "-stand.png")) );
-				npc.setAnimationWalk( ImageIO.read(new URL(m.getCodeBase() + "npcs/" + x + "-walk.png")) );
-				npc.setAnimationDeath( ImageIO.read(new URL(m.getCodeBase() + "npcs/" + x + "-death.png")) );
-				if(new URL(m.getCodeBase() + "npcs/" + x + "-revive.png").openConnection().getContentLength()>0){
-					npc.addArg("animationRevive", ImageIO.read(new URL(m.getCodeBase() + "npcs/" + x + "-revive.png")));
+				npc.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-stand.png")) );
+				npc.setAnimationWalk( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-walk.png")) );
+				npc.setAnimationDeath( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-death.png")) );
+				if(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-revive.png")!=null){
+					npc.addArg("animationRevive", ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-revive.png")));
 				}
 				setNewNPCType(npc);
 				x++;
@@ -731,33 +738,61 @@ public class Game {
 		Graphics g = m.backbufferG;
 		
 		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
+			if(npc.getX()+npc.getAnimationStand().getWidth()>offsetXF&&
+			   npc.getX()<offsetXF+m.width&&
+			   npc.getY()+npc.getAnimationStand().getWidth()>offsetYF&&
+			   npc.getY()<offsetYF+m.height)
 			npc.drawLogic(delta);
 		}
 		for(Tower tower = getLastTower();tower!=null;tower=tower.getPrevious()){
-			tower.drawLogic(delta);
+			if(tower.getX()+tower.getAnimationStand().getWidth()>offsetXF&&
+			   tower.getX()<offsetXF+m.width&&
+			   tower.getY()+tower.getAnimationStand().getWidth()>offsetYF&&
+			   tower.getY()<offsetYF+m.height)
+				tower.drawLogic(delta);
 		}
 		for(Projectile p = getLastProjectile();p!=null;p=p.getPrevious()){
-			p.drawLogic(delta);
+			if(p.getX()+p.getAnimationStand().getWidth()>offsetXF&&
+			   p.getX()<offsetXF+m.width&&
+			   p.getY()+p.getAnimationStand().getWidth()>offsetYF&&
+			   p.getY()<offsetYF+m.height)
+				p.drawLogic(delta);
 		}
 		
 		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
 			if( ! (s.getOwner() instanceof Button) &&
-				! (s.getOwner() instanceof Game) ){
-				s.draw(g, (int)offsetXF, (int)offsetYF);
+				! (s.getOwner() instanceof Game) &&
+				! (s.getOwner() instanceof Projectile)){
+				if(s.getX()+s.getImage().getWidth()>offsetXF&&
+				   s.getX()<offsetXF+m.width&&
+				   s.getY()+s.getImage().getHeight()>offsetYF&&
+				   s.getY()<offsetYF+m.height)
+					s.draw(g, (int)offsetXF, (int)offsetYF);
+			}
+		}
+		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+			if( (s.getOwner() instanceof Projectile) ){
+				if(s.getX()+s.getImage().getWidth()>offsetXF&&
+				   s.getX()<offsetXF+m.width&&
+				   s.getY()+s.getImage().getHeight()>offsetYF&&
+				   s.getY()<offsetYF+m.height)
+					s.draw(g, (int)offsetXF, (int)offsetYF);
 			}
 		}
 		
 		for( Animation a = getLastAnimation(); a != null; a = a.getPrevious() ){
+			if(a.getX()+a.getImage().getWidth()>offsetXF&&
+			   a.getX()<offsetXF+m.width&&
+			   a.getY()+a.getImage().getWidth()>offsetYF&&
+			   a.getY()<offsetYF+m.height)
 			a.draw(g, (int)offsetXF, (int)offsetYF, delta);
 		}
 		
 		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
 			g.setColor(Color.red);
-			g.fillRect((int) (npc.getX()-offsetXF),(int) (npc.getY()-offsetYF),50,10);
+			g.fillRect((int) (npc.getX()-offsetXF),(int) (npc.getY()-offsetYF),getTileWidth(),getTileWidth()/5);
 			g.setColor(Color.cyan);
-			g.fillRect((int) (npc.getX()-offsetXF),(int) (npc.getY()-offsetYF),(int)((double)npc.getHealth()/npc.getMaxHealth()*50D),10);
-			g.setColor(Color.orange);
-			g.drawString(npc.getHealth() + "/" + npc.getMaxHealth(), (int) (npc.getX()-offsetXF)+10,(int) (npc.getY()-offsetYF)+9);
+			g.fillRect((int) (npc.getX()-offsetXF),(int) (npc.getY()-offsetYF),(int)((double)npc.getHealth()/npc.getMaxHealth()*getTileWidth()),getTileWidth()/5);
 		}
 	}
 	
@@ -835,7 +870,7 @@ public class Game {
 		
 		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
 			if( s.getOwner() instanceof Button ){
-				s.draw(g, -m.width+panelWidth, -panelWidth-getMarginMinimap()*3);
+				s.draw(g, 0, 0);
 			}
 		}
 	}
@@ -910,6 +945,47 @@ public class Game {
 					deselectTower(true);
 				}
 			}
+			else{
+				if(isCursorInPlayingField()){
+					boolean isUpgrade = false;
+					for(Tower t = getLastTower();t!=null;t=t.getPrevious()){
+						if(m.mousePoint.x>t.getX()-offsetXF&&
+						   m.mousePoint.x<t.getX()-offsetXF+getTileWidth()&&
+						   m.mousePoint.y>t.getY()-offsetYF&&
+						   m.mousePoint.y<t.getY()-offsetYF+getTileWidth()){
+							isUpgrade = true;
+							destroyUpgradeButtons();
+							ArrayList<TowerType> upgrades = findUpgradesForTower(t.getTowerType());
+							int buttonX = panelWidth;
+							int buttonY = m.height-panelHeight+marginMinimap*2;
+							final Tower t2=t;
+							Button sell = new Button(m,buttonX,buttonY,getTileWidth(),getTileWidth(),imageSell,t){
+								public void run() {
+									t2.sell();
+									destroyUpgradeButtons();
+								}
+							};
+							sell.setDes(BUTTON_SELL_DESC);
+							setNewButton(sell);
+							buttonX += getTileWidth()+marginMinimap;
+							for(int loop=0;loop<upgrades.size();loop++){
+								final TowerType t3=upgrades.get(loop);
+								Button b = new Button(m,buttonX,buttonY,getTileWidth(),getTileWidth(),Animation.getImagePhase(upgrades.get(loop).getAnimationStand(),0,m),t){
+									public void run() {
+										t2.upgradeTo(t3);
+										destroyUpgradeButtons();
+									}
+								};
+								setNewButton(b);
+								buttonX += getTileWidth()+marginMinimap;
+							}
+						}
+					}
+					if(!isUpgrade){
+						destroyUpgradeButtons();
+					}
+				}
+			}
 			
 			if(m.mouseStart.x>=m.width-panelWidth+getMarginMinimap()&&
 				m.mouseStart.x<=m.width-getMarginMinimap()&&
@@ -966,6 +1042,7 @@ public class Game {
 					g.dispose();
 					setTooltip(new Sprite(m, m.width-getPanelWidth()+marginMinimap, m.height-getPanelHeight()+marginMinimap, img, this, false));
 					setNewSprite(getTooltip());
+					break;
 				}
 			}
 		}
@@ -986,6 +1063,26 @@ public class Game {
 			offsetYF+=delta*m.keySensitivity;
 			if(offsetYF>=maxOffsetY){offsetYF=maxOffsetY;}
 		}
+	}
+	
+	private void destroyUpgradeButtons(){
+		for(Button b=getLastButton();b!=null;b=b.getPrevious()){
+			if(b.getOwner() instanceof Tower){
+				b.destroy();
+			}
+		}
+	}
+	
+	private ArrayList<TowerType> findUpgradesForTower(TowerType towerType){
+		ArrayList<TowerType> ret = new ArrayList<TowerType>();
+		
+		for(TowerType t=getLastTowerType();t!=null;t=t.getPrevious()){
+			if(t.getBase()==towerType){
+				ret.add(t);
+			}
+		}
+		
+		return ret;
 	}
 	
 	private boolean isTowerOn(int x, int y) {

@@ -53,7 +53,7 @@ public class NPC {
 	public final static int ORIENTATION_WEST = 2;
 	public final static int ORIENTATION_SOUTH = 3;
 	private boolean untargetable;
-	
+		
 	public NPC (Main m, double x, double y, NPCType NPCType){
 		setX(x);
 		setY(y);
@@ -166,7 +166,8 @@ public class NPC {
 	}
 	
 	public void destroy(){
-		m.getGame().destroySprite(getSprite());
+		if(getSprite()!=null)
+			m.getGame().destroySprite(getSprite());
 		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()).setOrientation(orientation*90));
 		m.getGame().destroyNPC(this);
 	}
