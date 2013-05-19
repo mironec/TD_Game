@@ -1,8 +1,10 @@
 package main;
 
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
-public class Tower {
+public class Tower implements Buffable{
+	
 	protected Main m;
 	private double attackSpeed; //attacks per second
 	private double damage;      //damage
@@ -27,6 +29,9 @@ public class Tower {
 	private Tower next;
 	private Sprite sprite;
 	private TowerType towerType;
+	private boolean shootingAir;
+	private boolean shootingGround;
+	private ArrayList<Buff> buffs;
 	
 	public Tower(Main m, int x, int y, TowerType towerType){
 		this.m = m;
@@ -46,6 +51,9 @@ public class Tower {
 		setSprite(null);
 		setAnimation(ANIMATION_STAND);
 		setAnimationTime(0);
+		setShootingAir(true);
+		setShootingGround(true);
+		setBuffs(new ArrayList<Buff>());
 	}
 	
 	public void copyFromTower(Tower t){
@@ -61,13 +69,20 @@ public class Tower {
 		setProjectileAnimationStandDuration(t.getProjectileAnimationStandDuration());
 		setProjectileSpeed(t.getProjectileSpeed());
 		setRange(t.getRange());
+		setShootingAir(t.isShootingAir());
+		setShootingGround(t.isShootingGround());
 	}
 	
 	public void logic (int delta) {
 		additionalLogic(delta);
+		
+		ArrayList<Buff> buffs = new ArrayList<Buff>(this.buffs);
+		for( Buff b : buffs ) {
+			b.logic(delta);
+		}
+		
 		if(isNpcInRange()){
 			if(getAttackSpeed()>0&&
-			   getDamage()>0&&
 			   getRange()>0&&
 			   getAAcd()==0){
 				attack();
@@ -191,26 +206,57 @@ public class Tower {
 		
 		if(target!=null)
 			if( getDistance(target.getX(),target.getY(),p.getX(),p.getY()) < m.getGame().getTileWidth() )
-				if( !target.isUntargetable() )
+				if( canAttack(this,target) )
 					target.damage(getDamage());
+	}
+	
+	public void damage(Projectile p){
+		if(canAttack(this, p.getTarget()))
+			p.getTarget().damage(getDamage());
 	}
 	
 	public void attack(){
 		NPC target = getClosestNPC();
 		
-		setAAcd(1.0D/getAttackSpeed());
-		setAnimation(ANIMATION_ATTACK);
-		
-		Projectile p = new Projectile(m, getX(), getY(), target, this);
-		p.setAnimationDeath(getProjectileAnimationDeath());
-		p.setAnimationStand(getProjectileAnimationStand());
-		p.setAnimationDeathDuration(getProjectileAnimationDeathDuration());
-		p.setAnimationStandDuration(getProjectileAnimationStandDuration());
-		m.getGame().setNewProjectile( p );
+		if(target!=null){
+			setAAcd(1.0D/getAttackSpeed());
+			setAnimation(ANIMATION_ATTACK);
+			
+			Projectile p = new Projectile(m, getX(), getY(), target, this);
+			p.setAnimationDeath(getProjectileAnimationDeath());
+			p.setAnimationStand(getProjectileAnimationStand());
+			p.setAnimationDeathDuration(getProjectileAnimationDeathDuration());
+			p.setAnimationStandDuration(getProjectileAnimationStandDuration());
+			m.getGame().setNewProjectile( p );
+		}
 	}
 	
 	public NPC getClosestNPC(){
 		return getClosestNPC(getX(),getY());
+	}
+	
+	public static boolean canAttack(Tower t, NPC n){
+		if(n.isUntargetable())
+			return false;
+		if(!t.isShootingAir() && n.isFlying())
+			return false;
+		if(!t.isShootingGround() && !n.isFlying())
+			return false;
+		if(getDistance(t.getX(),t.getY(),n.getX(),n.getY())>t.getRange()*Main.instance.getGame().getTileWidth())
+			return false;
+		
+		return true;
+	}
+	
+	public static boolean canAttackIgnoreRange(Tower t, NPC n){
+		if(n.isUntargetable())
+			return false;
+		if(!t.isShootingAir() && n.isFlying())
+			return false;
+		if(!t.isShootingGround() && !n.isFlying())
+			return false;
+		
+		return true;
 	}
 	
 	public NPC getClosestNPC(double x, double y){
@@ -219,7 +265,7 @@ public class Tower {
 		
 		if(m.getGame().getLastNPC()!=null){
 		for(NPC npc = m.getGame().getLastNPC();npc!=null;npc=npc.getPrevious()){
-			if(npc.isUntargetable()){continue;}
+			if(!canAttack(this,npc)){continue;}
 			if(getDistance( npc.getX(),npc.getY(),x,y )<minDistance){
 				minDistance=getDistance( npc.getX(),npc.getY(),x,y );
 				closest = npc;
@@ -244,7 +290,7 @@ public class Tower {
 		return Math.pow(x-x2, 2) + Math.pow(y-y2, 2) < Math.pow(d, 2);
 	}
 	
-	public double getDistance(double x, double y, double x2, double y2){
+	public static double getDistance(double x, double y, double x2, double y2){
 		return Math.pow(Math.pow(x-x2, 2) + Math.pow(y-y2, 2), 0.5);
 	}
 
@@ -377,5 +423,37 @@ public class Tower {
 
 	public void setTowerType(TowerType towerType) {
 		this.towerType = towerType;
+	}
+
+	public boolean isShootingAir() {
+		return shootingAir;
+	}
+
+	public void setShootingAir(boolean shootingAir) {
+		this.shootingAir = shootingAir;
+	}
+
+	public boolean isShootingGround() {
+		return shootingGround;
+	}
+
+	public void setShootingGround(boolean shootingGround) {
+		this.shootingGround = shootingGround;
+	}
+
+	public void removeBuff(Buff buff) {
+		this.buffs.remove(buff);
+	}
+
+	public void addBuff(Buff buff) {
+		this.buffs.add(buff);
+	}
+
+	public ArrayList<Buff> getBuffs() {
+		return buffs;
+	}
+
+	public void setBuffs(ArrayList<Buff> buffs) {
+		this.buffs = buffs;
 	}
 }

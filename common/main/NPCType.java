@@ -13,6 +13,9 @@ public class NPCType extends NPC{
 	private int perWave;
 	private int bounty;
 	
+	public static final String NPC_TYPE_REVIVE = "revive";
+	public static final String NPC_TYPE_FINAL = "final";
+	
 	public NPCType (Main m, int id){
 		super(m, 0, 0, null);
 		this.id = id;

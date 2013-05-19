@@ -1,5 +1,8 @@
 package main;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class TowerType extends Tower{
 
 	private int id;
@@ -8,14 +11,16 @@ public class TowerType extends Tower{
 	private TowerType next;
 	private int cost;
 	private String type;
-	private Object[] args;
-	private int maxArgs=0;
-	private String description="";
+	private Map<String,Object> args = new HashMap<String, Object>();
+	private String description = "";
+	
+	public static final String TOWER_TYPE_MULTI_TARGET = "multiAttack";
+	public static final String TOWER_TYPE_SIEGE        = "siege";
+	public static final String TOWER_TYPE_SLOW         = "slow";
 	
 	public TowerType(Main m, int id) {
 		super(m, 0, 0, null);
 		this.id = id;
-		this.args = new Object[2];
 	}
 
 	public int getId() {
@@ -58,19 +63,22 @@ public class TowerType extends Tower{
 		this.type = type;
 	}
 
-	public Object[] getArgs() {
+	public Map<String,Object> getArgs() {
 		return args;
 	}
 
-	public void setArgs(Object[] args) {
+	public void setArgs(Map<String,Object> args) {
 		this.args = args;
 	}
 	
-	public void newArg(Object o){
-		args[maxArgs]=o;
-		maxArgs++;
+	public void addArg(String s, Object o){
+		args.put(s, o);
 	}
-
+	
+	public Object getArg(String s){
+		return args.get(s);
+	}
+	
 	public int getCost() {
 		return cost;
 	}

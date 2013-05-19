@@ -19,8 +19,6 @@ import javax.imageio.ImageIO;
 public class Game {
 	
 	private int tileWidth = 40;
-	//private BufferedImage tiles[];
-	//private int maxTiles = 1;
 	private BufferedImage black;
 	private BufferedImage minimap;
 	private Graphics minimapG;
@@ -39,6 +37,7 @@ public class Game {
 	
 	private double offsetXF = 0.0F, offsetYF = 0.0F;
 	private int maxOffsetX, maxOffsetY;
+	private int minOffsetX, minOffsetY;
 	
 	private Main m;
 	
@@ -74,7 +73,7 @@ public class Game {
 	public static final String RES_DIR = "/res/";
 	public static final String BUTTON_SELL_DESC = "Sell\n%FontSize:11%Sells the tower\nfor 100 percent\nof invested money";
 	
-	private int waveId = 2;
+	private int waveId = 0;
 	
 	public Game (Main m) {
 		black = new BufferedImage(tileWidth, tileWidth, BufferedImage.TYPE_INT_ARGB);
@@ -84,6 +83,8 @@ public class Game {
 		g.dispose();
 		maxOffsetX=1;
 		maxOffsetY=1;
+		minOffsetX=0;
+		minOffsetY=0;
 		towerSelected = false;
 		towerSelectedSprite = null;
 		
@@ -300,8 +301,8 @@ public class Game {
 		imageSell = resize(img,getTileWidth(),getTileWidth());
 		
 		}
-		catch (MalformedURLException e) {e.printStackTrace(); /*System.out.println("An Image couldn't be found.");*/} 
-		catch (IOException e) {e.printStackTrace(); /*System.out.println("An Image couldn't be found.");*/}
+		catch (MalformedURLException e) {e.printStackTrace();} 
+		catch (IOException e) {e.printStackTrace();}
 	}
 	
 	public static BufferedImage resize(BufferedImage img, int newW, int newH) {  
@@ -347,6 +348,18 @@ public class Game {
 		return done;
 	}
 	
+	public String findValue(String s, String find){
+		String val = "";
+		find += "=";
+		
+		if(s.contains(find)){
+			String key = s.substring( s.lastIndexOf(find) );
+			val = key.substring(find.length(), key.indexOf(";"));
+		}
+		
+		return val;
+	}
+	
 	public void loadTowerTypes(){
 		int x = 1;
 		try {
@@ -358,87 +371,28 @@ public class Game {
 				is.close();
 				String s = new String(b);
 				TowerType t = new TowerType(m, x);
-				String key;
-				String value;
-				String find;
-				////////////////////////////////////////////////////////
-				find = "type=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setType(value); }
-				////////////////////////////////////////////////////////
-				find = "attackSpeed=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setAttackSpeed( Double.parseDouble(value) ); }
-				////////////////////////////////////////////////////////
-				find = "damage=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setDamage( Double.parseDouble(value) ); }
-				////////////////////////////////////////////////////////
-				find = "projectileSpeed=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setProjectileSpeed( Double.parseDouble(value) ); }
-				////////////////////////////////////////////////////////
-				find = "projectileAnimationStandDuration=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setProjectileAnimationStandDuration( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "projectileAnimationDeathDuration=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setProjectileAnimationDeathDuration( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "range=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setRange( Double.parseDouble(value) ); }
-				////////////////////////////////////////////////////////
-				find = "animationStandDuration=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setAnimationStandDuration( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "animationAttackDuration=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setAnimationAttackDuration( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "base=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setBase( findTowerTypeById(Integer.parseInt(value)) ); }
-				////////////////////////////////////////////////////////
-				find = "cost=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setCost( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "description=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.setDescription( value ); }
-				////////////////////////////////////////////////////////
-				find = "maxTargets=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				t.newArg( Integer.parseInt(value) );}
+				
+				t.setType(findValue(s,"type"));
+				t.setAttackSpeed( Double.parseDouble(findValue(s,"attackSpeed")) );
+				t.setDamage( Double.parseDouble(findValue(s,"damage")) );
+				t.setProjectileSpeed( Double.parseDouble(findValue(s,"projectileSpeed")) );
+				t.setProjectileAnimationStandDuration( Integer.parseInt(findValue(s, "projectileAnimationStandDuration")) );
+				t.setProjectileAnimationDeathDuration( Integer.parseInt(findValue(s, "projectileAnimationDeathDuration")) );
+				t.setRange( Double.parseDouble(findValue(s, "range")) );
+				t.setAnimationStandDuration( Integer.parseInt(findValue(s, "animationStandDuration")) );
+				t.setAnimationAttackDuration( Integer.parseInt(findValue(s, "animationAttackDuration")) );
+				t.setBase( findTowerTypeById(Integer.parseInt(findValue(s, "base"))) );
+				t.setCost( Integer.parseInt(findValue(s, "cost")) );
+				t.setDescription( findValue(s, "description") );
+				t.setShootingAir( Boolean.parseBoolean(findValue(s, "shootingAir")) );
+				if(t.getType().equals(TowerType.TOWER_TYPE_MULTI_TARGET))
+					t.addArg("maxTargets", Integer.parseInt(findValue(s, "maxTargets")));
+				if(t.getType().equals(TowerType.TOWER_TYPE_SIEGE))
+					t.addArg("splashRadius", Double.parseDouble(findValue(s, "splashRadius")));
+				if(t.getType().equals(TowerType.TOWER_TYPE_SLOW)){
+					t.addArg("slow", Double.parseDouble(findValue(s, "slow")));
+					t.addArg("slowDuration", Integer.parseInt(findValue(s, "slowDuration")));
+				}
 				////////////////////////////////////////////////////////
 				t.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-stand.png")) );
 				t.setAnimationAttack( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-attack.png")) );
@@ -449,93 +403,9 @@ public class Game {
 			}
 		}
 		catch (MalformedURLException e) {e.printStackTrace();}
-		catch (IOException e) {e.printStackTrace();/*System.out.println("An Image couldn't be found.");*/}
+		catch (IOException e) {e.printStackTrace();}
 		
 	}
-	
-	/*public void loadFinal(){
-		try{
-			URL url = new URL(m.getCodeBase() + "npcs/final.cfg");
-			URLConnection con = url.openConnection();
-			byte[] b = new byte[con.getContentLength()];
-			con.getInputStream().read(b);
-			con.getInputStream().close();
-			String s = new String(b);
-			NPCType npc = new NPCType(m, -1);
-			String key;
-			String value;
-			String find;
-			////////////////////////////////////////////////////////
-			find = "maxHealth=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.setMaxHealth( Integer.parseInt(value) ); }
-			////////////////////////////////////////////////////////
-			find = "movementSpeed=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.setMovementSpeed( Double.parseDouble(value) ); }
-			////////////////////////////////////////////////////////
-			find = "animationStandDuration=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.setAnimationStandDuration( Integer.parseInt(value) ); }
-			////////////////////////////////////////////////////////
-			find = "animationWalkDuration=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.setAnimationWalkDuration( Integer.parseInt(value) ); }
-			////////////////////////////////////////////////////////
-			find = "animationDeathDuration=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.setAnimationDeathDuration( Integer.parseInt(value) ); }
-			////////////////////////////////////////////////////////
-			find = "perWave=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.setPerWave( Integer.parseInt(value) ); }
-			////////////////////////////////////////////////////////
-			find = "bounty=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.setBounty( Integer.parseInt(value) ); }
-			////////////////////////////////////////////////////////
-			find = "type=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.setType( value ); }
-			////////////////////////////////////////////////////////
-			find = "reviveTimer=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.addArg( "reviveTimer", Integer.parseInt(value) ); }
-			////////////////////////////////////////////////////////
-			find = "animationReviveDuration=";
-			if(s.contains(find)){
-			key = s.substring( s.lastIndexOf(find) );
-			value = key.substring(find.length(), key.indexOf(";"));
-			npc.addArg( "animationReviveDuration", Integer.parseInt(value) ); }
-			////////////////////////////////////////////////////////
-			npc.setAnimationStand( ImageIO.read(new URL(m.getCodeBase() + "npcs/final-stand.png")) );
-			npc.setAnimationWalk( ImageIO.read(new URL(m.getCodeBase() + "npcs/final-walk.png")) );
-			npc.setAnimationDeath( ImageIO.read(new URL(m.getCodeBase() + "npcs/final-death.png")) );
-			if(new URL(m.getCodeBase() + "npcs/final-revive.png").openConnection().getContentLength()>0){
-				npc.addArg("animationRevive", ImageIO.read(new URL(m.getCodeBase() + "npcs/final-revive.png")));
-			}
-			setNewNPCType(npc);
-		}
-		catch(Exception e){e.printStackTrace();}
-	}*/
 	
 	public void loadNPCTypes(){
 		int x = 1;
@@ -553,94 +423,36 @@ public class Game {
 				is.close();
 				String s = new String(b);
 				NPCType npc = new NPCType(m, x);
-				String key;
-				String value;
-				String find;
-				////////////////////////////////////////////////////////
-				find = "maxHealth=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.setMaxHealth( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "movementSpeed=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.setMovementSpeed( Double.parseDouble(value) ); }
-				////////////////////////////////////////////////////////
-				find = "animationStandDuration=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.setAnimationStandDuration( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "animationWalkDuration=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.setAnimationWalkDuration( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "animationDeathDuration=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.setAnimationDeathDuration( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "perWave=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.setPerWave( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "bounty=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.setBounty( Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "type=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.setType( value ); }
-				////////////////////////////////////////////////////////
-				find = "reviveTimer=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.addArg( "reviveTimer", Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "animationReviveDuration=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.addArg( "animationReviveDuration", Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "maxLife=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.addArg( "maxLife", Integer.parseInt(value) ); }
-				////////////////////////////////////////////////////////
-				find = "increment=";
-				if(s.contains(find)){
-				key = s.substring( s.lastIndexOf(find) );
-				value = key.substring(find.length(), key.indexOf(";"));
-				npc.addArg( "increment", Double.parseDouble(value) ); }
+
+				npc.setMaxHealth( Integer.parseInt(findValue(s, "maxHealth")) );
+				npc.setMovementSpeed( Double.parseDouble(findValue(s, "movementSpeed")) );
+				npc.setAnimationStandDuration( Integer.parseInt(findValue(s, "animationStandDuration")) );
+				npc.setAnimationWalkDuration( Integer.parseInt(findValue(s, "animationWalkDuration")) );
+				npc.setAnimationDeathDuration( Integer.parseInt(findValue(s, "animationDeathDuration")) );
+				npc.setPerWave( Integer.parseInt(findValue(s, "perWave")) );
+				npc.setBounty( Integer.parseInt(findValue(s, "bounty")) );
+				npc.setType( findValue(s, "type") );
+				npc.setFlying( Boolean.parseBoolean(findValue(s, "flying")) );
+				if(npc.getType().equals(NPCType.NPC_TYPE_REVIVE))
+					npc.addArg( "reviveTimer", Integer.parseInt(findValue(s, "reviveTimer")) );
+				if(npc.getType().equals(NPCType.NPC_TYPE_REVIVE))
+					npc.addArg( "animationReviveDuration", Integer.parseInt(findValue(s, "animationReviveDuration")) );
+				if(npc.getType().equals(NPCType.NPC_TYPE_FINAL))
+					npc.addArg( "maxLife", Integer.parseInt(findValue(s, "maxLife")) );
+				if(npc.getType().equals(NPCType.NPC_TYPE_FINAL))
+					npc.addArg( "increment", Double.parseDouble(findValue(s, "increment")) );
 				////////////////////////////////////////////////////////
 				npc.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-stand.png")) );
 				npc.setAnimationWalk( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-walk.png")) );
 				npc.setAnimationDeath( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-death.png")) );
-				if(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-revive.png")!=null){
+				if(npc.getType().equals(NPCType.NPC_TYPE_REVIVE))
 					npc.addArg("animationRevive", ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-revive.png")));
-				}
 				setNewNPCType(npc);
 				x++;
 			}
 		}
 		catch (MalformedURLException e) {e.printStackTrace();}
-		catch (IOException e) {e.printStackTrace();/*System.out.println("An Image couldn't be found.");*/}
+		catch (IOException e) {e.printStackTrace();}
 		
 	}
 	
@@ -707,8 +519,11 @@ public class Game {
 	    	
 			maxOffsetX = mapGraphicWidth-m.width+panelWidth;
 			maxOffsetY = mapGraphicHeight-m.height+panelHeight;
-			if(maxOffsetX<=0){maxOffsetX=0;}
-			if(maxOffsetY<=0){maxOffsetY=0;}
+			if(maxOffsetX<=0){maxOffsetX=minOffsetX=maxOffsetX/2;}
+			if(maxOffsetY<=0){maxOffsetY=minOffsetY=maxOffsetY/2;}
+			
+			offsetXF = minOffsetX;
+			offsetYF = minOffsetY;
 			
 			minimap = new BufferedImage(mapGraphicWidth, mapGraphicHeight, BufferedImage.TYPE_INT_ARGB);
 			minimapG = minimap.getGraphics();
@@ -816,7 +631,7 @@ public class Game {
 		g.fillRect(0, 0, m.width, m.height);
 		
 		if(currentMap.getImage() != null){
-			g.drawImage(currentMap.getImage(), 0-offsetX, 0-offsetY, m);
+			g.drawImage(currentMap.getImage(), -offsetX, -offsetY, m);
 		}
 		else{
 			int offsetXTiles=(int)Math.floor(offsetX/tileWidth);
@@ -832,7 +647,6 @@ public class Game {
 				int index = y*currentMap.getWidth()+x+4;
 				if(y<0||x<0||x>=currentMap.getWidth()||y>=currentMap.getHeight()){g.drawImage(black, (x-offsetXTiles)*tileWidth-offsetXMini, (y-offsetYTiles)*tileWidth-offsetYMini, m);}
 				else{
-					//g.drawImage(tiles[currentMap.getData()[index]], (x-offsetXTiles)*tileWidth-offsetXMini, (y-offsetYTiles)*tileWidth-offsetYMini, m);
 					if(currentMap.getData()[index]==TILE_GRASS)
 						g.setColor(Color.green);
 					if(currentMap.getData()[index]==TILE_DIRT)
@@ -892,7 +706,6 @@ public class Game {
 			if(currentMap.getData()[index]==TILE_VOID)
 				g.setColor(Color.black);
 			g.fillRect(x*tileWidth, y*tileWidth, tileWidth, tileWidth);
-			//g.drawImage(tiles[currentMap.getData()[index]], x*tileWidth, y*tileWidth, (x+1)*tileWidth, (y+1)*tileWidth, 0, 0, tiles[currentMap.getData()[index]].getWidth(), tiles[currentMap.getData()[index]].getHeight(), m);
 		}
 		}
 		
@@ -911,7 +724,11 @@ public class Game {
 		int minimapWidth = panelWidth-getMarginMinimap()*2;
 		double modifierX = (double)minimapWidth/mapGraphicWidth;
 		double modifierY = (double)minimapWidth/mapGraphicHeight;
-		m.backbufferG.drawRect(m.width - panelWidth + getMarginMinimap() + (int)(offsetXF*modifierX), getMarginMinimap() + (int)(offsetYF*modifierY),(int)((double)(m.width-panelWidth)*modifierX),(int)((double)(m.height-panelHeight)*modifierY));
+		double x = offsetXF<0?0:offsetXF;
+		double y = offsetYF<0?0:offsetYF;
+		double width = m.width - panelWidth > mapGraphicWidth ? mapGraphicWidth : m.width - panelWidth;
+		double height = m.height - panelHeight > mapGraphicHeight ? mapGraphicHeight : m.height - panelHeight;
+		m.backbufferG.drawRect(m.width - panelWidth + getMarginMinimap() + (int)(x*modifierX), getMarginMinimap() + (int)(y*modifierY),(int)((double)width*modifierX),(int)((double)height*modifierY));
 	}
 	
 	public String printMap(int x, int y){
@@ -996,13 +813,13 @@ public class Game {
 						-0.5f*(m.width-panelWidth)/(double)mapGraphicWidth*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
 						*(mapGraphicWidth/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
 				if(offsetXF>=maxOffsetX){offsetXF=maxOffsetX;}
-				if(offsetXF<=0){offsetXF=0;}
+				if(offsetXF<=minOffsetX){offsetXF=minOffsetX;}
 				
 				offsetYF = (m.mousePoint.y-getMarginMinimap()
 						-0.5f*(m.height-panelHeight)/(double)mapGraphicHeight*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
 						*(mapGraphicHeight/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
 				if(offsetYF>=maxOffsetY){offsetYF=maxOffsetY;}
-				if(offsetYF<=0){offsetYF=0;}
+				if(offsetYF<=minOffsetY){offsetYF=minOffsetY;}
 			}
 			
 			for(Button b = getLastButton();b!=null;b=b.getPrevious()){
@@ -1049,7 +866,7 @@ public class Game {
 		
 		if(m.keyDown[KeyEvent.VK_LEFT]||m.keyDown[KeyEvent.VK_A]){
 			offsetXF-=delta*m.keySensitivity;
-			if(offsetXF<=0.0f){offsetXF=0.0f;}
+			if(offsetXF<=minOffsetX){offsetXF=minOffsetX;}
 		}
 		if(m.keyDown[KeyEvent.VK_RIGHT]||m.keyDown[KeyEvent.VK_D]){
 			offsetXF+=delta*m.keySensitivity;
@@ -1057,7 +874,7 @@ public class Game {
 		}
 		if(m.keyDown[KeyEvent.VK_UP]||m.keyDown[KeyEvent.VK_W]){
 			offsetYF-=delta*m.keySensitivity;
-			if(offsetYF<=0.0f){offsetYF=0.0f;}
+			if(offsetYF<=minOffsetY){offsetYF=minOffsetY;}
 		}
 		if(m.keyDown[KeyEvent.VK_DOWN]||m.keyDown[KeyEvent.VK_S]){
 			offsetYF+=delta*m.keySensitivity;
@@ -1337,8 +1154,18 @@ public class Game {
 	public Tower createTower(TowerType towerType){
 		String type = towerType.getType();
 		Tower t;
-		if( type.equals("multiAttack") ){
-			TowerMultiAttack to = new TowerMultiAttack(m,0,0,towerType,(Integer) towerType.getArgs()[0]);
+		if( type.equals(TowerType.TOWER_TYPE_MULTI_TARGET) ){
+			TowerMultiAttack to = new TowerMultiAttack(m,0,0,towerType,(Integer) towerType.getArg("maxTargets"));
+			setNewTower(to);
+			t = to;
+		}
+		else if( type.equals(TowerType.TOWER_TYPE_SIEGE) ){
+			TowerSiege to = new TowerSiege(m,0,0,towerType,(Double) towerType.getArg("splashRadius"));
+			setNewTower(to);
+			t = to;
+		}
+		else if( type.equals(TowerType.TOWER_TYPE_SLOW) ){
+			TowerSlow to = new TowerSlow(m,0,0,towerType,(Double) towerType.getArg("slow"), (Integer) towerType.getArg("slowDuration"));
 			setNewTower(to);
 			t = to;
 		}
@@ -1355,7 +1182,7 @@ public class Game {
 	public NPC createNPC(NPCType npcType){
 		String type = npcType.getType();
 		NPC npc;
-		if( type.equals("revive") ){
+		if( type.equals(NPCType.NPC_TYPE_REVIVE) ){
 			NPC npco = new NPCRevive(m,0,0,npcType,
 					(Integer) npcType.getArg("reviveTimer"),
 					(BufferedImage)npcType.getArg("animationRevive"),
@@ -1363,7 +1190,7 @@ public class Game {
 			setNewNPC(npco);
 			npc = npco;
 		}
-		else if( type.equals("final") ){
+		else if( type.equals(NPCType.NPC_TYPE_FINAL) ){
 			NPC npco = new NPCFinal(m,0,0,npcType,getFinalsSpawned());
 			setNewNPC(npco);
 			npc = npco;

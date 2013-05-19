@@ -75,8 +75,7 @@ public class Projectile {
 					m.getGame().destroySprite(getSprite());
 				m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()));
 				m.getGame().destroyProjectile(this);
-				if(!npc.isUntargetable())
-					npc.damage(getTower().getDamage());
+				getTower().damage(this);
 			}
 			else{
 				double newX = getX()+((npc.getX()-getX())*doDist/distance);

@@ -20,7 +20,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	/**
 	 * 
 	 */
-	private static final long serialVersionUID = 19L;
+	private static final long serialVersionUID = 20L;
 	
 	public static final int RENDER_MODE_MENU = 0;
 	public static final int RENDER_MODE_GAME = 1;
@@ -45,6 +45,8 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	int elapsedTime2 = 0;
 	int interiorDelta = 0;
 	
+	public static Main instance;
+	
 	private Game game;
 
 	private Event lastEvent;
@@ -64,6 +66,8 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	private boolean paused = false;
 	
 	public void init () {
+		instance = this;
+		
 		width = this.getWidth();
 		height = this.getHeight();
 		

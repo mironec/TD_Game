@@ -32,7 +32,7 @@ public class TowerMultiAttack extends Tower{
 		
 		if(m.getGame().getLastNPC()!=null){
 		for(NPC npc = m.getGame().getLastNPC();npc!=null;npc=npc.getPrevious()){
-			if(npc.isUntargetable()){continue;}
+			if(!canAttack(this, npc)){continue;}
 			if(getDistance( npc.getX(),npc.getY(),getX(),getY() )<getRange()*m.getGame().getTileWidth()){
 				all[npcs]=npc;
 				npcs++;

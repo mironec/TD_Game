@@ -4,7 +4,7 @@ import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
-public class NPC {
+public class NPC implements Buffable{
 
 	private double x;
 	private double y;
@@ -13,18 +13,11 @@ public class NPC {
 	private int wait; //in ms
 	protected Main m;
 	private int command;
+	private ArrayList<Buff> buffs;
+	
 	public static final int COMMAND_NOTHING=0;
 	public static final int COMMAND_MOVE=1;
-	
 	public static final int ANIMATION_DEATH=0;
-	public int getOrientation() {
-		return orientation;
-	}
-
-	public void setOrientation(int orientation) {
-		this.orientation = orientation;
-	}
-
 	public static final int ANIMATION_STAND=1;
 	public static final int ANIMATION_WALK=2;
 	private BufferedImage animationDeath;
@@ -43,6 +36,7 @@ public class NPC {
 	private int health;
 	private int maxHealth;
 	private double movementSpeed; //tiles per second
+	private double movementSpeedMultiplier;
 	private NPC previous;
 	private NPC next;
 	private Sprite sprite;
@@ -53,6 +47,7 @@ public class NPC {
 	public final static int ORIENTATION_WEST = 2;
 	public final static int ORIENTATION_SOUTH = 3;
 	private boolean untargetable;
+	private boolean flying;
 		
 	public NPC (Main m, double x, double y, NPCType NPCType){
 		setX(x);
@@ -76,7 +71,10 @@ public class NPC {
 		setTargetY(getTileY());
 		setHealth(1);
 		setMovementSpeed(1);
+		setMovementSpeedMultiplier(1.0D);
 		setUntargetable(false);
+		setFlying(false);
+		setBuffs(new ArrayList<Buff>());
 		
 		m.getGame().setNumberNPC(m.getGame().getNumberNPC()+1);
 	}
@@ -91,6 +89,7 @@ public class NPC {
 		setMaxHealth(npc.getMaxHealth());
 		setMovementSpeed(npc.getMovementSpeed());
 		setUntargetable(npc.isUntargetable());
+		setFlying(npc.isFlying());
 		//////////////////////////////////////////////////////////
 		setAnimation(ANIMATION_STAND);
 		setAnimationTime(0);
@@ -103,6 +102,12 @@ public class NPC {
 	
 	public void logic (int delta) {
 		additionalLogic(delta);
+		
+		ArrayList<Buff> buffs = new ArrayList<Buff>(this.buffs);
+		for( Buff b : buffs ) {
+			b.logic(delta);
+		}
+		
 		if(getX()/m.getGame().getTileWidth()==m.getGame().findGoal().x&&
 		   getY()/m.getGame().getTileWidth()==m.getGame().findGoal().y){
 			m.getGame().setLives(m.getGame().getLives()-1);
@@ -249,59 +254,51 @@ public class NPC {
 			pathIndex=1;
 			wait=0;
 		}
-		if(wait<=0){
-			setAnimation(ANIMATION_WALK);
-			if(tileX==targetX&&tileY==targetY){
-				command = COMMAND_NOTHING;
-				setAnimation(ANIMATION_STAND);
-				return;
-			}
-			
-			x=tileX*m.getGame().getTileWidth();
-			y=tileY*m.getGame().getTileWidth();
-			
-			if(tileX<path.get(pathIndex).x){orientation = ORIENTATION_EAST;}
-			if(tileY>path.get(pathIndex).y){orientation = ORIENTATION_NORTH;}
-			if(tileX>path.get(pathIndex).x){orientation = ORIENTATION_WEST;}
-			if(tileY<path.get(pathIndex).y){orientation = ORIENTATION_SOUTH;}
-			
-			tileX = path.get(pathIndex).x;
-			tileY = path.get(pathIndex).y;
-			
-			
-			pathIndex++;
-			
-			int intWait = 0;
-			if(wait<0)
-				intWait=-wait;
-			
-			wait = (int) (1000/getMovementSpeed());
-			if(intWait>0)
-				goToTarget(intWait);
-		}
 		else{
-			wait-=delta;
-			int intWait = wait;
-			
-			if(wait<=0){intWait=0;}
-			
-			if(tileX*m.getGame().getTileWidth()>x){
-				x=((double)tileX-(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-			}
-			if(tileX*m.getGame().getTileWidth()<x){
-				x=((double)tileX+(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-			}
-			if(tileY*m.getGame().getTileWidth()>y){
-				y=((double)tileY-(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-			}
-			if(tileY*m.getGame().getTileWidth()<y){
-				y=((double)tileY+(double)intWait*getMovementSpeed()/1000D )*(double)m.getGame().getTileWidth();
-			}
-			
-			if(wait<=0){goToTarget(-wait);}
+			move(delta/1000D*m.getGame().getTileWidth()*getMovementSpeed(),path.get(pathIndex).x,path.get(pathIndex).y);
 		}
 	}
 
+	public void move (double units, int targetX, int targetY){
+		setAnimation(ANIMATION_WALK);
+		double leftOver = 0;
+		
+		if(targetX*m.getGame().getTileWidth()>x){
+			x+=units;
+			orientation = ORIENTATION_EAST;
+			if(!(targetX*m.getGame().getTileWidth()>x)){leftOver=x-targetX*m.getGame().getTileWidth(); x=targetX*m.getGame().getTileWidth();}
+		}
+		else if(targetX*m.getGame().getTileWidth()<x){
+			x-=units;
+			orientation = ORIENTATION_WEST;
+			if(!(targetX*m.getGame().getTileWidth()<x)){leftOver=targetX*m.getGame().getTileWidth()-x; x=targetX*m.getGame().getTileWidth();}
+		}
+		else if(targetY*m.getGame().getTileWidth()>y){
+			y+=units;
+			orientation = ORIENTATION_SOUTH;
+			if(!(targetY*m.getGame().getTileWidth()>y)){leftOver=y-targetY*m.getGame().getTileWidth(); y=targetY*m.getGame().getTileWidth();}
+		}
+		else if(targetY*m.getGame().getTileWidth()<y){
+			y-=units;
+			orientation = ORIENTATION_NORTH;
+			if(!(targetY*m.getGame().getTileWidth()<y)){leftOver=targetY*m.getGame().getTileWidth()-y; y=targetY*m.getGame().getTileWidth();}
+		}
+		else{leftOver=units;}
+		
+		if(leftOver!=0){
+			pathIndex++;
+			
+			if(targetX==this.targetX&&targetY==this.targetY){
+				command = COMMAND_NOTHING;
+				setAnimation(ANIMATION_STAND);
+				path = null;
+				return;
+			}
+			
+			move(leftOver,path.get(pathIndex).x,path.get(pathIndex).y);
+		}
+	}
+	
 	public double getX() {
 		return x;
 	}
@@ -380,8 +377,12 @@ public class NPC {
 		this.health = health;
 	}
 
-	public double getMovementSpeed() {
+	public double getDefaultMovementSpeed(){
 		return movementSpeed;
+	}
+	
+	public double getMovementSpeed() {
+		return movementSpeed*movementSpeedMultiplier;
 	}
 
 	public void setMovementSpeed(double movementSpeed) {
@@ -499,5 +500,45 @@ public class NPC {
 
 	public void setUntargetable(boolean untargetable) {
 		this.untargetable = untargetable;
+	}
+
+	public boolean isFlying() {
+		return flying;
+	}
+
+	public void setFlying(boolean flying) {
+		this.flying = flying;
+	}
+
+	public ArrayList<Buff> getBuffs() {
+		return buffs;
+	}
+
+	public void setBuffs(ArrayList<Buff> buffs) {
+		this.buffs = buffs;
+	}
+	
+	public void addBuff(Buff buff){
+		this.buffs.add(buff);
+	}
+
+	public void removeBuff(Buff buff) {
+		this.buffs.remove(buff);
+	}
+	
+	public int getOrientation() {
+		return orientation;
+	}
+
+	public void setOrientation(int orientation) {
+		this.orientation = orientation;
+	}
+	
+	public double getMovementSpeedMultiplier() {
+		return movementSpeedMultiplier;
+	}
+
+	public void setMovementSpeedMultiplier(double movementSpeedMultiplier) {
+		this.movementSpeedMultiplier = movementSpeedMultiplier;
 	}
 }
