@@ -13,10 +13,12 @@ public class NPCType extends NPC{
 	private int perWave;
 	private int bounty;
 	
-	public static final String NPC_TYPE_REVIVE = "revive";
-	public static final String NPC_TYPE_FINAL = "final";
+	pubetweenSpawns;
+	private int bounty;
 	
-	public NPCType (Main m, int id){
+	public static final String NPC_TYPE_REVIVE    = "revive";
+	public static final String NPC_TYPE_FINAL     = "final";
+	public static final String NPC_TYPE_RESISTANT = "resistantType (Main m, int id){
 		super(m, 0, 0, null);
 		this.id = id;
 	}
@@ -83,6 +85,15 @@ public class NPCType extends NPC{
 
 	public void setBounty(int bounty) {
 		this.bounty = bounty;
+	}
+	
+}
+	public int getBetweenSpawns() {
+		return betweenSpawns;
+	}
+
+	public void setBetweenSpawns(int betweenSpawns) {
+		this.betweenSpawns = betweenSpawns;
 	}
 	
 }

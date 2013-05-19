@@ -8,7 +8,7 @@ import java.net.MalformedURLException;
 
 import javax.imageio.ImageIO;
 
-public class Map {
+public class TDMap {
 	private String map = "Map.map";
 	
 	private int width;
@@ -20,7 +20,7 @@ public class Map {
 	
 	private Main m;
 	
-	public Map (Main m) {
+	public TDMap (Main m) {
 		this.m = m;
 	}
 	
@@ -34,7 +34,7 @@ public class Map {
 			try {
 				InputStream is = Main.class.getResourceAsStream(Game.RES_DIR + "maps/" + mapname);
 				
-				byte[] ret = new byte[Map.class.getResource(Game.RES_DIR + "maps/" + mapname).openConnection().getContentLength()];
+				byte[] ret = new byte[TDMap.class.getResource(Game.RES_DIR + "maps/" + mapname).openConnection().getContentLength()];
 				ByteArrayOutputStream out = new ByteArrayOutputStream();
 				
 				byte data[] = new byte[1024];

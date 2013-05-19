@@ -22,7 +22,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	 */
 	private static final long serialVersionUID = 20L;
 	
-	public static final int RENDER_MODE_MENU = 0;
+	public static f2nal int RENDER_MODE_MENU = 0;
 	public static final int RENDER_MODE_GAME = 1;
 	
 	public int width, height = 1;
@@ -92,16 +92,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		
 		/*boolean dobre = game.loadMap("mapa.txt",Map.METHOD_LOAD_FILE);
 		game.readMap();
-		if(!dobre){
-			System.out.println("PROBLEM!!!");
-			System.exit(1);
-		}*/
-		renderMode=RENDER_MODE_GAME;
-		
-	}
-	
-	public void update( Graphics g ) {
-      g.drawImage( backbuffer2, 0, 0, this );
+		if(!dobffer2, 0, 0, this );
       atWork=false;
    }
 

@@ -14,7 +14,9 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 
-import javax.imageio.ImageIO;
+import javax.iimport java.util.HashMap;
+import java.util.Map;
+//import java.util.Mapx.imageio.ImageIO;
 
 public class Game {
 	
@@ -23,7 +25,7 @@ public class Game {
 	private BufferedImage minimap;
 	private Graphics minimapG;
 	private Map currentMap;
-	private static final String passable = "01110";
+	privateTD static final String passable = "01110";
 	private static final String buildable = "10000";
 	
 	private static final byte TILE_GRASS = 0;
@@ -94,11 +96,11 @@ public class Game {
 	
 	public void init(){
 		loadMap("mapa.txt", Map.METHOD_LOAD_FILE);
-		readMap();
-		
-		loadTowerTypes();
-		loadNPCTypes();
-		loadAdditional();
+		readMap();TDMap(m);
+	}
+	
+	public void init(){
+		loadMap("mapa.txt", TD;
 		prepareButtons();
 		
 		resizeImages();
@@ -343,7 +345,7 @@ public class Game {
 		try{
 			currentMap = new Map(m);
 			currentMap.loadMap();
-		} catch (Exception e){System.out.println("PROBLEEEEEEEEEEEM!"); done=false;}
+		} catch (Exception e){System.out.println("PROBLEEEEEEEEEEEM!"); done=TDfalse;}
 		
 		return done;
 	}
@@ -354,7 +356,7 @@ public class Game {
 		
 		if(s.contains(find)){
 			String key = s.substring( s.lastIndexOf(find) );
-			val = key.substring(find.length(), key.indexOf(";"));
+			val = key.substring(find.length(), key.indeTDxOf(";"));
 		}
 		
 		return val;
@@ -445,7 +447,18 @@ public class Game {
 				npc.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-stand.png")) );
 				npc.setAnimationWalk( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-walk.png")) );
 				npc.setAnimationDeath( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-death.png")) );
-				if(npc.getType().equals(NPCType.NPC_TYPE_REVIVE))
+				if(npc.getType().equals(NPCType.NPC_TYPE_REVIif(npc.getType().equals(NPCType.NPC_TYPE_RESISTANT)){
+					String s2 = findValue(s, "against");
+					@SuppressWarnings("rawtypes")
+					Map<Class, Double> Map = new HashMap<Class, Double>();
+					for(String s3 : s2.split("%")){
+						if(s3.equals("")) continue;
+						String buff = s3.split(":")[0];
+						String value = s3.split(":")[1];
+						Map.put(Buff.types.get(buff),Double.parseDouble(value));
+					}
+					npc.addArg("against", Map);
+				}E_REVIVE))
 					npc.addArg("animationRevive", ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-revive.png")));
 				setNewNPCType(npc);
 				x++;
@@ -1226,7 +1239,7 @@ public class Game {
 	}
 
 	public void setLastButton(Button lastButton) {
-		this.lastButton = lastButton;
+		this.l@SuppressWarnings("unchecked")s.lastButton = lastButton;
 	}
 	
 	public int getPanelWidth() {
@@ -1234,7 +1247,7 @@ public class Game {
 	}
 
 	public void setPanelWidth(int panelWidth) {
-		this.panelWidth = panelWidth;
+		this.panelReviveWidth = panelWidth;
 	}
 
 	public int getPanelHeight() {
@@ -1250,10 +1263,16 @@ public class Game {
 	}
 
 	public void setTowerSelected(boolean towerSelected) {
-		this.towerSelected = towerSelected;
+		this.towerSeFinallected = towerSelected;
 	}
 
 	public Sprite getTowerSelectedSprite() {
+		return towerSelectedSprite;
+	}
+
+	 if( type.equals(NPCType.NPC_TYPE_RESISTANT) ){
+			@SuppressWarnings("rawtypes")
+			NPCResistant npco = new NPCResistant(m,0,0,npcType,(java.util.Map<Class,Double>)npcType.getArg("against"electedSprite() {
 		return towerSelectedSprite;
 	}
 

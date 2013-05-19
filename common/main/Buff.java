@@ -1,5 +1,8 @@
 package main;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Buff {
 	
 	private int timeLeft;
@@ -7,7 +10,13 @@ public class Buff {
 	private Buffable owner;
 	private boolean over = false;
 	
-	public Buff(int dur, Buffable b){
+	public Buff(int static final String BUFF_SLOW = "buffSlow";
+	
+	@SuppressWarnings("rawtypes")
+	public static final Map<String, Class> types = new HashMap<String, Class>();
+	static{
+		types.put(BUFF_SLOW, BuffSlow.class);
+	}lic Buff(int dur, Buffable b){
 		this.timeLeft = dur;
 		this.duration = dur;
 		this.owner = b;
