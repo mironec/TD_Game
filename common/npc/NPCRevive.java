@@ -1,6 +1,12 @@
-package main;
+package npc;
+
+import graphics.Animation;
+import graphics.Sprite;
 
 import java.awt.image.BufferedImage;
+
+import main.Game;
+import main.Main;
 
 public class NPCRevive extends NPC{
 	

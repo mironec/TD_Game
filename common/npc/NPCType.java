@@ -1,7 +1,9 @@
-package main;
+package npc;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import main.Main;
 
 public class NPCType extends NPC{
 
@@ -11,14 +13,14 @@ public class NPCType extends NPC{
 	private String type;
 	private Map<String,Object> args = new HashMap<String, Object>();
 	private int perWave;
-	private int bounty;
-	
-	pubetweenSpawns;
+	private int betweenSpawns;
 	private int bounty;
 	
 	public static final String NPC_TYPE_REVIVE    = "revive";
 	public static final String NPC_TYPE_FINAL     = "final";
-	public static final String NPC_TYPE_RESISTANT = "resistantType (Main m, int id){
+	public static final String NPC_TYPE_RESISTANT = "resistant";
+	
+	public NPCType (Main m, int id){
 		super(m, 0, 0, null);
 		this.id = id;
 	}
@@ -86,8 +88,7 @@ public class NPCType extends NPC{
 	public void setBounty(int bounty) {
 		this.bounty = bounty;
 	}
-	
-}
+
 	public int getBetweenSpawns() {
 		return betweenSpawns;
 	}

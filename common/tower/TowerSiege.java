@@ -1,6 +1,10 @@
-package main;
+package tower;
 
 import java.util.ArrayList;
+
+import npc.NPC;
+
+import main.Main;
 
 public class TowerSiege extends Tower {
 	

@@ -1,5 +1,7 @@
 package main;
 
+import graphics.Sprite;
+
 import java.awt.image.BufferedImage;
 
 public abstract class Button {

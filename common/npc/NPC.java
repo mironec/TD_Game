@@ -1,8 +1,17 @@
-package main;
+package npc;
+
+import graphics.Animation;
+import graphics.Sprite;
 
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+
+import buff.Buff;
+import buff.Buffable;
+
+import main.Game;
+import main.Main;
 
 public class NPC implements Buffable{
 

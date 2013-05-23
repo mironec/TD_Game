@@ -1,4 +1,7 @@
-package main;
+package tower;
+
+import npc.NPC;
+import main.Main;
 
 public class TowerMultiAttack extends Tower{
 

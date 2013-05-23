@@ -1,8 +1,10 @@
-package main;
+package npc;
+
+import main.Main;
 
 public class NPCFinal extends NPC {
 
-	public NPCFinal(Main m, double x, double y, main.NPCType NPCType, int number) {
+	public NPCFinal(Main m, double x, double y, npc.NPCType NPCType, int number) {
 		super(m, x, y, NPCType);
 		double maxHP = (Integer)NPCType.getArg("maxLife");
 		for(int loop=0;loop<number;loop++){

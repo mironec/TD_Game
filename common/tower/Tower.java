@@ -1,7 +1,18 @@
-package main;
+package tower;
+
+import graphics.Animation;
+import graphics.Sprite;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+
+import buff.Buff;
+import buff.Buffable;
+
+import npc.NPC;
+
+import main.Event;
+import main.Main;
 
 public class Tower implements Buffable{
 	

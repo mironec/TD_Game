@@ -1,7 +1,10 @@
-package main;
+package graphics;
 
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
+
+import main.Game;
+import main.Main;
 
 public class Animation {
 	

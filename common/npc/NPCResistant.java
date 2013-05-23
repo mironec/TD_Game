@@ -1,6 +1,8 @@
-package main;
+package npc;
 
 import java.util.Map;
+
+import main.Main;
 
 public class NPCResistant extends NPC{
 	
@@ -8,7 +10,7 @@ public class NPCResistant extends NPC{
 	private Map<Class, Double> against;
 	
 	@SuppressWarnings("rawtypes")
-	public NPCResistant(Main m, double x, double y, main.NPCType NPCType, Map<Class, Double> against) {
+	public NPCResistant(Main m, double x, double y, npc.NPCType NPCType, Map<Class, Double> against) {
 		super(m, x, y, NPCType);
 		this.against = against;
 	}

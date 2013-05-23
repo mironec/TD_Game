@@ -1,6 +1,14 @@
-package main;
+package tower;
+
+import graphics.Animation;
+import graphics.Sprite;
 
 import java.awt.image.BufferedImage;
+
+import main.Game;
+import main.Main;
+import npc.NPC;
+
 
 public class Projectile {
 	private double x;

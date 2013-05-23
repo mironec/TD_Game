@@ -1,5 +1,8 @@
 package main;
 
+import graphics.Animation;
+import graphics.Sprite;
+
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -19,6 +22,20 @@ import java.util.Map;
 //import java.util.Mapx.imageio.ImageIO;
 
 public class Game {
+import buff.BuffType;
+
+import npc.NPC;
+import npc.NPCFinal;
+import npc.NPCResistant;
+import npc.NPCRevive;
+import npc.NPCType;
+
+import tower.Projectile;
+import tower.Tower;
+import tower.TowerDebuffer;
+import tower.TowerMultiAttack;
+import tower.TowerSiege;
+import tower.TowerTypeme {
 	
 	private int tileWidth = 40;
 	private BufferedImage black;
@@ -56,6 +73,8 @@ public class Game {
 	private NPCType lastNPCType;
 	private Animation lastAnimation;
 	private Button lastButton;
+	
+	BuffType lastBuff lastButton;
 	
 	private boolean towerSelected;
 	private Sprite towerSelectedSprite;
@@ -105,7 +124,7 @@ public class Game {
 		
 		resizeImages();
 		
-		nextWave = new Event(m,5000,1){
+		nextWaBuffTypes();		nextWave = new Event(m,5000,1){
 			public void run(int delta){
 				spawnWave(findNPCTypeById(waveId+1).getPerWave(),1000);
 			}
@@ -372,7 +391,29 @@ public class Game {
 				is.read(b);
 				is.close();
 				String s = new String(b);
-				TowerType t = new TowerType(m, x);
+				TowerType t = new ToBuffpe(m, x);
+				
+				t.setType(findValue(s,"type"));
+				t.setAttackSpeed( Double.parseDouble(findValue(s,"attackSpbuff) );
+				t.setDamage( Double.parseDouble(findValue(s,"damage")) );
+				t.setProjectileSpeed( Double.parsbuffle(findValue(s,"projectileSpeed")) );
+				t.setProjectileAnimationStandDuration( Integer.parseInt(findValue(s, "projectileAnimBuffType buff = new BuffType(m, x);
+				
+				buff.setType(findValue(s,"type"));
+				buff.setDuration(Integer.parseInt(findValue(s,"duration")));
+				buff.setStackingType(Integer.parseInt(findValue(s,"stackingType")));
+				
+				if(buff.getType().equals(BuffType.BUFF_SLOW)){
+					buff.addArg("slow", Double.parseDouble(findValue(s,"slow")));
+				}
+				
+				setNewBuffType(buffcOther(int delta){
+		if(getLives()<=0){
+			m.renderMode = Main.RENDER_MODE_MENU;
+		}
+		if( isTowerSelected() ){
+			if(getTowerSelectedSprite() != null){
+				TowerType(m, x);
 				
 				t.setType(findValue(s,"type"));
 				t.setAttackSpeed( Double.parseDouble(findValue(s,"attackSpeed")) );
@@ -397,8 +438,14 @@ public class Game {
 				}
 				////////////////////////////////////////////////////////
 				t.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-stand.png")) );
-				t.setAnimationAttack( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-attack.png")) );
-				t.setProjectileAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-projectileStand.png")) );
+				t.setAnimationAttack( ImageIO.read(Main.class.getResourceAsStDEBUFFER)){
+					String s2 = findValue(s, "debuffs");
+					ArrayList<BuffType> debuffs = new ArrayList<BuffType>();
+					for(String s3 : s2.split(":")){
+						if(s3.equals("")) continue;
+						debuffs.add(findBuffTypeById(Integer.parseInt(s3)));
+					}
+					t.addArg("debuffs", debuffsx + "-projectileStand.png")) );
 				t.setProjectileAnimationDeath( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-projectileDeath.png")) );
 				setNewTowerType(t);
 				x++;
@@ -455,7 +502,7 @@ public class Game {
 						if(s3.equals("")) continue;
 						String buff = s3.split(":")[0];
 						String value = s3.split(":")[1];
-						Map.put(Buff.types.get(buff),Double.parseDouble(value));
+						Map.put(Buff.types.get(bufTypef),Double.parseDouble(value));
 					}
 					npc.addArg("against", Map);
 				}E_REVIVE))
@@ -1149,6 +1196,24 @@ public class Game {
 	}
 
 	public NPCType getLastNPCType() {
+		returvoid destroyBuffType(BuffType b){
+		if(getLastBuffType().equals(b)){
+			setLastBuffTypee towerSelectedImage) {
+		this.towerSelectedImage = towerSelectedImage;
+	}
+
+	public int getTowerSelectedX() {
+		return towerSelectedX;
+	}
+
+	public void setTowerSelectedX(int towerSelectedX)ffType(BuffType b){
+		if(getLastBuffType()!=null){
+			getLastBuffType().setNext(b);
+			b.setPrevious(getLastBuffType());
+		}
+		setLastBuffType(b);
+	}
+	 {
 		return lastNPCType;
 	}
 
@@ -1193,6 +1258,10 @@ public class Game {
 	}
 	
 	public NPC createNPC(NPCType npcType){
+		Str	
+	public BuffType findBuffTypeById (int id) {
+		for(BuffType b=getLastBuffType();b!=null;b=b.getPrevious()){
+			if(b.getId()==id){return bteNPC(NPCType npcType){
 		String type = npcType.getType();
 		NPC npc;
 		if( type.equals(NPCType.NPC_TYPE_REVIVE) ){
@@ -1223,13 +1292,9 @@ public class Game {
 			setLastButton(b.getPrevious());
 		}
 		if(b.getPrevious()!=null){b.getPrevious().setNext(b.getNext());}
-		if(b.getNext()!=null){b.getNext().setPrevious(b.getPrevious());}
-	}
-	
-	public void setNewButton(Button b){
-		if(getLastButton()!=null){
-			getLastButton().setNext(b);
-			b.setPrevious(getLastButton());
+		if(b.getNext()!=null){b.getNext().setPDEBUFFER) ){
+			@SuppressWarnings("unchecked")
+			TowerDebuffer to = new TowerDebuffer(m,0,0,towerType,(ArrayList<BuffType>)towerType.getArg("debuffs.setPrevious(getLastButton());
 		}
 		setLastButton(b);
 	}
@@ -1397,5 +1462,14 @@ public class Game {
 
 	public void setAdditionalStatus(String additionalStatus) {
 		this.additionalStatus = additionalStatus;
+	}
+}
+
+	public BuffType getLastBuffType() {
+		return lastBuffType;
+	}
+
+	public void setLastBuffType(BuffType lastBuffType) {
+		this.lastBuffType = lastBuffType;
 	}
 }

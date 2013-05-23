@@ -1,7 +1,9 @@
-package main;
+package tower;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import main.Main;
 
 public class TowerType extends Tower{
 
@@ -14,9 +16,9 @@ public class TowerType extends Tower{
 	private Map<String,Object> args = new HashMap<String, Object>();
 	private String description = "";
 	
-	public static final String TOWER_TYPE_MULTI_TARGET = "multiAttack";
-	public static final String TOWER_TYPE_SIEGE        = "siege";
-	public static final String TOWER_TYPE_SLOW         = "slow";
+	public static final String TOWER_TYPE_MULTI_TARGET	= "multiAttack";
+	public static final String TOWER_TYPE_SIEGE			= "siege";
+	public static final String TOWER_TYPE_DEBUFFER		= "debuffer";
 	
 	public TowerType(Main m, int id) {
 		super(m, 0, 0, null);

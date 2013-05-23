@@ -1,7 +1,9 @@
-package main;
+package graphics;
 
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
+
+import main.Main;
 
 public class Sprite {
 	private Main m;
