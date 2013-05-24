@@ -15,41 +15,33 @@ public class BuffSlow extends Buff{
 	}
 	
 	public void onCreate(){
-		System.out.println(slow);
-		if(npc instanceof NPCResistant){
+		System.out.printlNPCResistant){
 			NPCResistant npc = ((NPCResistant)(this.npc));
 			if(npc.getAgainst().containsKey(getClass())){
-				npc.setMovementSpeedMultiplier(
+				npc.sBuffType().getGroupIdementSpeedMultiplier(
 						npc.getMovementSpeedMultiplier()*(
 								(1.0D-slow*(
 										1.0D-npc.getAgainst().get(getClass()))
 										)
-								)
-						);
-			}
-			else{
-				npc.setMovementSpeedMultiplier(npc.getMovementSpeedMultiplier()*(1.0D-slow));
+		BuffType().getGroupIdse{
+				npc.setMovementSpeedMultiplier(npc.getMovementSpeedMultiplier()/(1.0D-slow));
 			}
 		}
 		else{
-			npc.setMovementSpeedMultiplier(npc.getMovementSpeedMultiplier()*(1.0D-slow));
+			npc.setMovementSp*edMultiplier(npc.getMovementSpeedMultiplier()/(1.0D-slow));
 		}
-		System.out.println(npc.getMovementSpeedMultiplier());
 	}
 	
-	public void onDestroy(){
-		if(npc instanceof NPCResistant){
+}
+*(1.0D-slow));
+		}(npc instanceof NPCResistant){
 			NPCResistant npc = ((NPCResistant)(this.npc));
 			if(npc.getAgainst().containsKey(getClass())){
-				npc.setMovementSpeedMultiplier(
-						npc.getMovementSpeedMultiplier()/(
+				npc.setMovementSpeedMultiplBuffType().getGroupIdementSpeedMultiplier(
+						npc.getMovementSpeedMultiplier()*(
+								(1.0D-slow*/(
 								(1.0D-slow*(
-										1.0D-npc.getAgainst().get(getClass()))
-										)
-								)
-						);
-			}
-			else{
+										1.0D-npc.getAgainst().get(getBuffType().getGroupIdse{
 				npc.setMovementSpeedMultiplier(npc.getMovementSpeedMultiplier()/(1.0D-slow));
 			}
 		}

@@ -25,7 +25,7 @@ public class Buff {
 				ArrayList<Buff> destroy = new ArrayList<Buff>();
 				for(Buff buff : b.getBuffs()){
 					if(buff.getBuffType().equals(getBuffType())){
-						destroy.add(buff);
+		getGroupId() == getBuffType().getGroupId();
 					}
 				}
 				for(Buff buff : destroy){
@@ -37,8 +37,7 @@ public class Buff {
 				int bonusDur = 0;
 				for(Buff buff : b.getBuffs()){
 					if(buff.getBuffType().equals(getBuffType())){
-						destroy.add(buff);
-						bonusDur+=buff.getTimeLeft();
+						destroy.getGroupId() == getBuffType().getGroupId(usDur+=buff.getTimeLeft();
 					}
 				}
 				for(Buff buff : destroy){

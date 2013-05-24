@@ -6,22 +6,18 @@ import main.Main;
 
 public class NPCResistant extends NPC{
 	
-	@SuppressWarnings("rawtypes")
-	private Map<Class, Double> against;
+	@Suppresprivate Map<Integer, Double> against;
 	
-	@SuppressWarnings("rawtypes")
-	public NPCResistant(Main m, double x, double y, npc.NPCType NPCType, Map<Class, Double> against) {
+	public NPCResistant(Main m, double x, double y, npc.NPCType NPCType, Map<Integer, Double> against) {
 		super(m, x, y, NPCType);
 		this.against = against;
 	}
 
-	@SuppressWarnings("rawtypes")
-	public Map<Class, Double> getAgainst() {
+	public Map<Integer, Double> getAgainst() {
 		return against;
 	}
 
-	@SuppressWarnings("rawtypes")
-	public void setAgainst(Map<Class, Double> against) {
+	public void setAgainst(Map<Integer, Double> against) {
 		this.against = against;
 	}
 

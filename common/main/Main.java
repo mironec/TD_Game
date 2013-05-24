@@ -68,7 +68,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	public void init () {
 		instance = this;
 		
-		width = this.getWidth();
+		width = this.getWidthboolean logicPidth = this.getWidth();
 		height = this.getHeight();
 		
 		backbuffer = new BufferedImage(width,height,BufferedImage.TYPE_INT_ARGB);
@@ -176,7 +176,7 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 		}
 	}
 	
-	public void handleInput (int delta) {
+	public void handleInput  && !logicPaused(int delta) {
 		if(renderMode==RENDER_MODE_GAME){
 			game.handleInput(delta);
 		}
@@ -206,7 +206,9 @@ public class Main extends Applet implements Runnable, KeyListener, MouseListener
 	public void mouseExited(MouseEvent e) {}
 
 	public void mousePressed(MouseEvent e) {
-		mouseStart = new Point(e.getPoint());
+		mouseStart = new Point(e.getPo	
+		if(e.getKeyChar()=='l'){
+			logicPaused = !logicP Point(e.getPoint());
 		mouseDown[e.getButton()] = true;
 	}
 

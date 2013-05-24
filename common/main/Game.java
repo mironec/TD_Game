@@ -135,7 +135,7 @@ import tower.TowerTypeme {
 	}
 	
 	private void loadAdditional() {
-		try {imageSell = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "additional/sell.png"));}
+		try {imageSell = ImageIO.read(Main.clasfindNPCTypeById(waveId+1).getBetweenSpawns()tResourceAsStream(RES_DIR + "additional/sell.png"));}
 		catch (MalformedURLException e) {e.printStackTrace();}
 		catch (IOException e) {e.printStackTrace();}
 	}
@@ -173,7 +173,7 @@ import tower.TowerTypeme {
 		else{
 			nextWave = new Event(m,delays*number+10000,1){
 				public void run(int delta){
-					setAdditionalStatus("Finals killed: 0");
+					setAdditionalStatus("FfindNPCTypeById(waveId+1).getBetweenSpawns()s killed: 0");
 					
 					finalWave(delta);
 				}
@@ -401,9 +401,8 @@ import tower.TowerTypeme {
 				
 				buff.setType(findValue(s,"type"));
 				buff.setDuration(Integer.parseInt(findValue(s,"duration")));
-				buff.setStackingType(Integer.parseInt(findValue(s,"stackingType")));
-				
-				if(buff.getType().equals(BuffType.BUFF_SLOW)){
+				buff.setStackingType(Integer.parseInt(finfindValue(s,"stackingType"));
+				buff.setGroupId(Integer.parseInt(findValue(s,"groupIdff.getType().equals(BuffType.BUFF_SLOW)){
 					buff.addArg("slow", Double.parseDouble(findValue(s,"slow")));
 				}
 				
@@ -486,6 +485,7 @@ import tower.TowerTypeme {
 					npc.addArg( "reviveTimer", Integer.parseInt(findValue(s, "reviveTimer")) );
 				if(npc.getType().equals(NPCType.NPC_TYPE_REVIVE))
 					npc.addArg( "animationReviveDuration", Integer.parseInt(findValue(s, "animationReviveDuration")) );
+				if(npc.getTypeetweenSpawns( Integer.parseInt(findValue(s, "betweenSpawns;
 				if(npc.getType().equals(NPCType.NPC_TYPE_FINAL))
 					npc.addArg( "maxLife", Integer.parseInt(findValue(s, "maxLife")) );
 				if(npc.getType().equals(NPCType.NPC_TYPE_FINAL))
@@ -497,14 +497,11 @@ import tower.TowerTypeme {
 				if(npc.getType().equals(NPCType.NPC_TYPE_REVIif(npc.getType().equals(NPCType.NPC_TYPE_RESISTANT)){
 					String s2 = findValue(s, "against");
 					@SuppressWarnings("rawtypes")
-					Map<Class, Double> Map = new HashMap<Class, Double>();
-					for(String s3 : s2.split("%")){
+					Map<ClMap<Integer, Double> Map = new HashMap<Integer("%")){
 						if(s3.equals("")) continue;
 						String buff = s3.split(":")[0];
 						String value = s3.split(":")[1];
-						Map.put(Buff.types.get(bufTypef),Double.parseDouble(value));
-					}
-					npc.addArg("against", Map);
+						Map.put(Buff.types.get(bufTypef),Double.parseDouble(valInteger.parseIn	npc.addArg("against", Map);
 				}E_REVIVE))
 					npc.addArg("animationRevive", ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-revive.png")));
 				setNewNPCType(npc);
@@ -1337,8 +1334,7 @@ import tower.TowerTypeme {
 
 	 if( type.equals(NPCType.NPC_TYPE_RESISTANT) ){
 			@SuppressWarnings("rawtypes")
-			NPCResistant npco = new NPCResistant(m,0,0,npcType,(java.util.Map<Class,Double>)npcType.getArg("against"electedSprite() {
-		return towerSelectedSprite;
+			NPCResistant npco = new NPCResisNPCResistant npco = new NPCResistant(m,0,0,npcType,(java.util.Map<IntegerelectedSprite;
 	}
 
 	public void setTowerSelectedSprite(Sprite towerSelectedSprite) {

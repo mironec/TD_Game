@@ -10,7 +10,7 @@ public class BuffType extends Buff {
 
 	private String type;
 	private int id;
-	@SuppressWarnings("unused")
+	@SuppressWarprivate int groupIssWarnings("unused")
 	private Main m;
 	private int duration;
 	private int stackingType;
@@ -110,6 +110,24 @@ public class BuffType extends Buff {
 
 	public void setNext(BuffType next) {
 		this.next = next;
+	}
+
+}
+	
+	public int getGroupId() {
+		return groupId;
+	}
+
+	
+	public void setGroupId(int groupId) {
+		this.groupId = groupId;
+	}
+
+	
+	public void setStackingType(String s) {
+		if(s.equals("refresh")){stackingType=STACKING_REFRESH;}
+		if(s.equals("duration")){stackingType=STACKING_DURATION;}
+		if(s.equals("intensity")){stackingType=STACKING_INTENSITY;}
 	}
 
 }
