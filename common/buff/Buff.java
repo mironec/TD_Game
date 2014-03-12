@@ -24,8 +24,8 @@ public class Buff {
 			if(stackingType==STACKING_REFRESH){
 				ArrayList<Buff> destroy = new ArrayList<Buff>();
 				for(Buff buff : b.getBuffs()){
-					if(buff.getBuffType().equals(getBuffType())){
-		getGroupId() == getBuffType().getGroupId();
+					if(buff.getBuffType().getGroupId() == getBuffType().getGroupId()){
+						destroy.add(buff);
 					}
 				}
 				for(Buff buff : destroy){
@@ -36,8 +36,9 @@ public class Buff {
 				ArrayList<Buff> destroy = new ArrayList<Buff>();
 				int bonusDur = 0;
 				for(Buff buff : b.getBuffs()){
-					if(buff.getBuffType().equals(getBuffType())){
-						destroy.getGroupId() == getBuffType().getGroupId(usDur+=buff.getTimeLeft();
+					if(buff.getBuffType().getGroupId() == getBuffType().getGroupId()){
+						destroy.add(buff);
+						bonusDur+=buff.getTimeLeft();
 					}
 				}
 				for(Buff buff : destroy){

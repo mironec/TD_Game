@@ -2,6 +2,7 @@ package main;
 
 import graphics.Sprite;
 
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 
 public abstract class Button {
@@ -11,10 +12,9 @@ public abstract class Button {
 	private BufferedImage img;
 	private Sprite sprite;
 	private Main m;
-	private Button previous;
-	private Button next;
 	private String des = "";
 	private Object owner;
+	private int keybind = KeyEvent.VK_DEAD_MACRON;
 	
 	public Button(Main m, int x, int y, int width, int height, BufferedImage img, Object owner){
 		this.m = m;
@@ -91,6 +91,12 @@ public abstract class Button {
 		return false;
 	}
 	
+	public void key(int key){
+		if( key == getKeybind() ){
+			run();
+		}
+	}
+	
 	public void click(int x, int y){
 		if(isHere(x,y)){
 			run();
@@ -113,22 +119,6 @@ public abstract class Button {
 		this.sprite = sprite;
 	}
 
-	public Button getPrevious() {
-		return previous;
-	}
-
-	public void setPrevious(Button previous) {
-		this.previous = previous;
-	}
-
-	public Button getNext() {
-		return next;
-	}
-
-	public void setNext(Button next) {
-		this.next = next;
-	}
-
 	public String getDes() {
 		return des;
 	}
@@ -143,5 +133,13 @@ public abstract class Button {
 
 	public void setOwner(Object owner) {
 		this.owner = owner;
+	}
+
+	public int getKeybind() {
+		return keybind;
+	}
+
+	public void setKeybind(int keybind) {
+		this.keybind = keybind;
 	}
 }

@@ -9,8 +9,6 @@ public class TowerType extends Tower{
 
 	private int id;
 	private TowerType base;
-	private TowerType previous;
-	private TowerType next;
 	private int cost;
 	private String type;
 	private Map<String,Object> args = new HashMap<String, Object>();
@@ -39,22 +37,6 @@ public class TowerType extends Tower{
 
 	public void setBase(TowerType base) {
 		this.base = base;
-	}
-
-	public TowerType getPrevious() {
-		return previous;
-	}
-
-	public void setPrevious(TowerType previous) {
-		this.previous = previous;
-	}
-
-	public TowerType getNext() {
-		return next;
-	}
-
-	public void setNext(TowerType next) {
-		this.next = next;
 	}
 
 	public String getType() {

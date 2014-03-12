@@ -46,8 +46,6 @@ public class NPC implements Buffable{
 	private int maxHealth;
 	private double movementSpeed; //tiles per second
 	private double movementSpeedMultiplier;
-	private NPC previous;
-	private NPC next;
 	private Sprite sprite;
 	private NPCType NPCType;
 	private int orientation = ORIENTATION_EAST;
@@ -120,9 +118,10 @@ public class NPC implements Buffable{
 		if(getX()/m.getGame().getTileWidth()==m.getGame().findGoal().x&&
 		   getY()/m.getGame().getTileWidth()==m.getGame().findGoal().y){
 			m.getGame().setLives(m.getGame().getLives()-1);
-			m.getGame().destroySprite(getSprite());
+			die();
+			/*m.getGame().destroySprite(getSprite());
 			m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()).setOrientation(getOrientation()*90));
-			m.getGame().destroyNPC(this);
+			m.getGame().destroyNPC(this);*/
 		}
 		if(getCommand()==NPC.COMMAND_MOVE){
 			goToTarget(delta);
@@ -165,14 +164,21 @@ public class NPC implements Buffable{
 	public void damage(double damage){
 		health-=damage;
 		if(health<=0){
-			die();
+			dieWithBenefits();
 		}
 	}
 	
-	public void die(){
-		onDeath();
-		destroy();
+	public void dieWithBenefits(){
 		m.getGame().setMoney(m.getGame().getMoney()+getNPCType().getBounty());
+		onDeath();
+		die();
+	}
+	
+	public void die(){
+		setUntargetable(true);
+		destroy();
+		if(m.getGame().getNpcs().size()==0 && m.getGame().getCurrentWave().getRepeat() == 0){m.getGame().lastNpcDeath();}
+		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()).setOrientation(orientation*90));
 	}
 	
 	public void onDeath(){
@@ -180,9 +186,10 @@ public class NPC implements Buffable{
 	}
 	
 	public void destroy(){
-		if(getSprite()!=null)
-			m.getGame().destroySprite(getSprite());
-		m.getGame().setNewAnimation(new Animation(m, (int)getX(), (int)getY(), getAnimationDeath(), this, false, getAnimationDeathDuration()).setOrientation(orientation*90));
+		for(Buff b : getBuffs()){
+			b.destroy();
+		}
+		m.getGame().destroySprite(getSprite());
 		m.getGame().destroyNPC(this);
 	}
 	
@@ -263,9 +270,9 @@ public class NPC implements Buffable{
 			pathIndex=1;
 			wait=0;
 		}
-		else{
+		
 			move(delta/1000D*m.getGame().getTileWidth()*getMovementSpeed(),path.get(pathIndex).x,path.get(pathIndex).y);
-		}
+		
 	}
 
 	public void move (double units, int targetX, int targetY){
@@ -398,22 +405,6 @@ public class NPC implements Buffable{
 		this.movementSpeed = movementSpeed;
 	}
 
-	public NPC getPrevious() {
-		return previous;
-	}
-
-	public void setPrevious(NPC previous) {
-		this.previous = previous;
-	}
-
-	public NPC getNext() {
-		return next;
-	}
-
-	public void setNext(NPC next) {
-		this.next = next;
-	}
-
 	public BufferedImage getAnimationDeath() {
 		return animationDeath;
 	}
@@ -520,7 +511,7 @@ public class NPC implements Buffable{
 	}
 
 	public ArrayList<Buff> getBuffs() {
-		return buffs;
+		return new ArrayList<Buff>(buffs);
 	}
 
 	public void setBuffs(ArrayList<Buff> buffs) {

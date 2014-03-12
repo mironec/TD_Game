@@ -10,18 +10,18 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
-
-import javax.iimport java.util.HashMap;
+import java.util.HashMap;
 import java.util.Map;
-//import java.util.Mapx.imageio.ImageIO;
 
-public class Game {
+import javax.imageio.ImageIO;
+
 import buff.BuffType;
 
 import npc.NPC;
@@ -35,14 +35,16 @@ import tower.Tower;
 import tower.TowerDebuffer;
 import tower.TowerMultiAttack;
 import tower.TowerSiege;
-import tower.TowerTypeme {
+import tower.TowerType;
+
+public class Game {
 	
 	private int tileWidth = 40;
 	private BufferedImage black;
 	private BufferedImage minimap;
 	private Graphics minimapG;
-	private Map currentMap;
-	privateTD static final String passable = "01110";
+	private TDMap currentMap;
+	private static final String passable = "01110";
 	private static final String buildable = "10000";
 	
 	private static final byte TILE_GRASS = 0;
@@ -65,16 +67,16 @@ import tower.TowerTypeme {
 	private int marginMinimap = 5;
 	
 	private int numberNPC = 0;
-	private Projectile lastProjectile;
-	private NPC lastNPC;
-	private Sprite lastSprite;
-	private Tower lastTower;
-	private TowerType lastTowerType;
-	private NPCType lastNPCType;
-	private Animation lastAnimation;
-	private Button lastButton;
 	
-	BuffType lastBuff lastButton;
+	private ArrayList<Projectile> projectiles = new ArrayList<Projectile>();
+	private ArrayList<NPC> npcs = new ArrayList<NPC>();
+	private ArrayList<Sprite> sprites = new ArrayList<Sprite>();
+	private ArrayList<Tower> towers = new ArrayList<Tower>();
+	private ArrayList<TowerType> towerTypes = new ArrayList<TowerType>();
+	private ArrayList<NPCType> NPCTypes = new ArrayList<NPCType>();
+	private ArrayList<BuffType> buffTypes = new ArrayList<BuffType>();
+	private ArrayList<Animation> animations = new ArrayList<Animation>();
+	private ArrayList<Button> buttons = new ArrayList<Button>();
 	
 	private boolean towerSelected;
 	private Sprite towerSelectedSprite;
@@ -82,7 +84,7 @@ import tower.TowerTypeme {
 	private BufferedImage towerSelectedImage;
 	private TowerType towerSelectedTowerType;
 	
-	private int money = 50;
+	private int money = 15*2;
 	private int lives = 40;
 	private Sprite tooltip;
 	private String status = "";
@@ -90,11 +92,12 @@ import tower.TowerTypeme {
 	private int finalsSpawned=0;
 	private int finalsKilled=0;
 	private Event nextWave;
+	private Event currentWave;
 	private BufferedImage imageSell;
 	public static final String RES_DIR = "/res/";
-	public static final String BUTTON_SELL_DESC = "Sell\n%FontSize:11%Sells the tower\nfor 100 percent\nof invested money";
+	public static final String BUTTON_SELL_DESC = "<c>FontSize:16<c><c>Bold<c>Sell\n<c>FontSize:12<c><c>Plain<c>Sells the tower for 100%\nof invested money";
 	
-	private int waveId = 0;
+	private int waveId = 1;
 	
 	public Game (Main m) {
 		black = new BufferedImage(tileWidth, tileWidth, BufferedImage.TYPE_INT_ARGB);
@@ -110,23 +113,25 @@ import tower.TowerTypeme {
 		towerSelectedSprite = null;
 		
 		this.m=m;
-		currentMap = new Map(m);
+		currentMap = new TDMap(m);
 	}
 	
 	public void init(){
-		loadMap("mapa.txt", Map.METHOD_LOAD_FILE);
-		readMap();TDMap(m);
-	}
-	
-	public void init(){
-		loadMap("mapa.txt", TD;
+		setVariables();
+		loadMap("mapa.txt", TDMap.METHOD_LOAD_FILE);
+		readMap();
+		
+		loadBuffTypes();
+		loadTowerTypes();
+		loadNPCTypes();
+		loadAdditional();
 		prepareButtons();
 		
 		resizeImages();
 		
-		nextWaBuffTypes();		nextWave = new Event(m,5000,1){
+		nextWave = new Event(m,10000,1){
 			public void run(int delta){
-				spawnWave(findNPCTypeById(waveId+1).getPerWave(),1000);
+				spawnWave(findNPCTypeById(getWaveId()).getPerWave(),findNPCTypeById(getWaveId()).getBetweenSpawns(),delta);
 			}
 		};
 		
@@ -134,52 +139,79 @@ import tower.TowerTypeme {
 		
 	}
 	
+	public void setVariables(){
+		setMoney(15);
+		setWaveId(1);
+		setLives(40);
+		setFinalsKilled(0);
+		
+		setTowerSelected(false);
+		
+		setProjectiles(new ArrayList<Projectile>());
+		setNpcs(new ArrayList<NPC>());
+		setSprites(new ArrayList<Sprite>());
+		setTowers(new ArrayList<Tower>());
+		setTowerTypes(new ArrayList<TowerType>());
+		setNPCTypes(new ArrayList<NPCType>());
+		setBuffTypes(new ArrayList<BuffType>());
+		setAnimations(new ArrayList<Animation>());
+		setButtons(new ArrayList<Button>());
+		m.setEvents(new ArrayList<Event>());
+		nextWave = null;
+		currentWave = null;
+		
+		setStatus("");
+		setAdditionalStatus("");
+		setFinalsSpawned(0);
+	}
+	
 	private void loadAdditional() {
-		try {imageSell = ImageIO.read(Main.clasfindNPCTypeById(waveId+1).getBetweenSpawns()tResourceAsStream(RES_DIR + "additional/sell.png"));}
+		try {imageSell = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "additional/sell.png"));}
 		catch (MalformedURLException e) {e.printStackTrace();}
 		catch (IOException e) {e.printStackTrace();}
 	}
-
-	public void spawnWave(int number, int delays){
-		
+	
+	public void lastNpcDeath(){
 		setWaveId(getWaveId()+1);
-		final int waveId = getWaveId();
 		
-		NPC npc = createNPC(findNPCTypeById(waveId));
+		if(findNPCTypeById(getWaveId())!=null){
+			nextWave = new Event(m,5000,1){
+				public void run(int delta){
+					spawnWave(findNPCTypeById(getWaveId()).getPerWave(), findNPCTypeById(getWaveId()).getBetweenSpawns(),delta);
+				}
+			};
+		}
+		else{
+			nextWave = new Event(m,5000,1){
+				public void run(int delta){
+					setAdditionalStatus("Finals killed: 0");
+					setWaveId(-1);
+					
+					finalWave(delta);
+				}
+			};
+		}
+		m.setNewEvent(nextWave);
+	}
+
+	public void spawnWave(int number, int delays, int delta){		
+		NPC npc = createNPC(findNPCTypeById(getWaveId()));
 		npc.setX(findSpawn().x*tileWidth);
 		npc.setY(findSpawn().y*tileWidth);
 		npc.issueMoveCommand(findGoal().x, findGoal().y);
+		npc.logic(delta);
 		
-		Event e = new Event(m,delays,number-1){
+		currentWave = new Event(m,delays,number-1){
 			public void run(int delta){
-				NPC npc = createNPC(findNPCTypeById(waveId));
+				NPC npc = createNPC(findNPCTypeById(getWaveId()));
 				npc.setX(findSpawn().x*tileWidth);
 				npc.setY(findSpawn().y*tileWidth);
 				npc.issueMoveCommand(findGoal().x, findGoal().y);
 				npc.logic(delta);
 			}
 		};
-		m.setNewEvent(e);
-		
-		
-		if(findNPCTypeById(waveId+1)!=null){
-			nextWave = new Event(m,delays*number+10000,1){
-				public void run(int delta){
-					spawnWave(findNPCTypeById(waveId+1).getPerWave(), 1000);
-				}
-			};
-			m.setNewEvent(nextWave);
-		}
-		else{
-			nextWave = new Event(m,delays*number+10000,1){
-				public void run(int delta){
-					setAdditionalStatus("FfindNPCTypeById(waveId+1).getBetweenSpawns()s killed: 0");
-					
-					finalWave(delta);
-				}
-			};
-			m.setNewEvent(nextWave);
-		}
+		m.setNewEvent(currentWave);
+		currentWave.logic(delta);
 	}
 	
 	public void finalWave(int delta){
@@ -189,12 +221,12 @@ import tower.TowerTypeme {
 		npc.issueMoveCommand(findGoal().x, findGoal().y);
 		npc.logic(delta);
 		
-		Event e = new Event(m,1500,1){
+		currentWave = new Event(m,findNPCTypeById(-1).getBetweenSpawns(),1){
 			public void run (int delta){
 				finalWave(delta);
 			}
 		};
-		m.setNewEvent(e);
+		m.setNewEvent(currentWave);
 	}
 	
 	public Point findSpawn(){
@@ -225,7 +257,7 @@ import tower.TowerTypeme {
 		int posX = m.width-panelWidth+getMarginMinimap()*2;
 		int posY = panelWidth+getMarginMinimap()*5;
 		
-		for(TowerType t = getLastTowerType();t!=null;t=t.getPrevious()){
+		for(TowerType t : getTowerTypes()){
 			if(t.getBase() == null){									//The Tower is not an upgrade from another Tower
 				final int id = t.getId();
 				Button b = new Button(m, posX, posY, getPanelWidth()/4, getPanelWidth()/4,
@@ -238,8 +270,8 @@ import tower.TowerTypeme {
 				setNewButton(b);
 				
 				posX += getPanelWidth()/4 + getMarginMinimap();
-				if(posX>=m.width-panelWidth+getMarginMinimap()*2 + getPanelWidth()){
-					posX = getMarginMinimap()*2;
+				if(posX+getPanelWidth()/4>=m.width-panelWidth+getMarginMinimap()*2 + getPanelWidth()){
+					posX = m.width-panelWidth+getMarginMinimap()*2;
 					posY += getPanelWidth()/4 + getMarginMinimap();
 				}
 			}
@@ -277,7 +309,7 @@ import tower.TowerTypeme {
 	public void resizeImages(){
 		try {
 		BufferedImage img;
-		for(NPCType npc = getLastNPCType();npc!=null;npc=npc.getPrevious()){
+		for(NPCType npc : getNPCTypes()){
 			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + npc.getId() + "-death.png"));
 			npc.setAnimationDeath( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			
@@ -292,7 +324,7 @@ import tower.TowerTypeme {
 				npc.addArg( "animationRevive", resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			}
 		}
-		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
+		for(NPC npc : getNpcs()){
 			npc.setAnimationDeath(npc.getNPCType().getAnimationDeath());
 			npc.setAnimationStand(npc.getNPCType().getAnimationStand());
 			npc.setAnimationWalk(npc.getNPCType().getAnimationWalk());
@@ -300,9 +332,12 @@ import tower.TowerTypeme {
 				((NPCRevive)npc).setAnimationRevive((BufferedImage)npc.getNPCType().getArg("animationRevive"));
 		}
 		
-		for(TowerType t = getLastTowerType();t!=null;t=t.getPrevious()){
-			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-attack.png"));
-			t.setAnimationAttack( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
+		for(TowerType t : getTowerTypes()){
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-preAttack.png"));
+			t.setAnimationPreAttack( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
+			
+			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-postAttack.png"));
+			t.setAnimationPostAttack( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 			
 			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-stand.png"));
 			t.setAnimationStand( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
@@ -313,8 +348,9 @@ import tower.TowerTypeme {
 			img = ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + t.getId() + "-projectileDeath.png"));
 			t.setProjectileAnimationDeath( resize(img,getTileWidth(),getTileWidth()*Animation.getImagePhases(img)) );
 		}
-		for(Tower t = getLastTower();t!=null;t=t.getPrevious()){
-			t.setAnimationAttack(t.getTowerType().getAnimationAttack());
+		for(Tower t : getTowers()){
+			t.setAnimationPreAttack(t.getTowerType().getAnimationPreAttack());
+			t.setAnimationPostAttack(t.getTowerType().getAnimationPostAttack());
 			t.setAnimationStand(t.getTowerType().getAnimationStand());
 		}
 		
@@ -329,7 +365,7 @@ import tower.TowerTypeme {
 	public static BufferedImage resize(BufferedImage img, int newW, int newH) {  
         int w = img.getWidth();
         int h = img.getHeight();
-        BufferedImage dimg = new BufferedImage(newW, newH, img.getType());
+        BufferedImage dimg = new BufferedImage(newW, newH, img.getType()==0?BufferedImage.TYPE_INT_ARGB:img.getType());
         Graphics2D g = dimg.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
         RenderingHints.VALUE_INTERPOLATION_BILINEAR);
@@ -352,7 +388,7 @@ import tower.TowerTypeme {
 		boolean done = true;
 		
 		try{
-			currentMap = new Map(m);
+			currentMap = new TDMap(m);
 			currentMap.loadMap(mapname, method);
 		} catch (Exception e){System.out.println("PROBLEEEEEEEEEEEM!"); done=false;}
 		
@@ -362,9 +398,9 @@ import tower.TowerTypeme {
 	public boolean loadMap () {
 		boolean done = true;
 		try{
-			currentMap = new Map(m);
+			currentMap = new TDMap(m);
 			currentMap.loadMap();
-		} catch (Exception e){System.out.println("PROBLEEEEEEEEEEEM!"); done=TDfalse;}
+		} catch (Exception e){System.out.println("PROBLEEEEEEEEEEEM!"); done=false;}
 		
 		return done;
 	}
@@ -375,10 +411,43 @@ import tower.TowerTypeme {
 		
 		if(s.contains(find)){
 			String key = s.substring( s.lastIndexOf(find) );
-			val = key.substring(find.length(), key.indeTDxOf(";"));
+			val = key.substring(find.length(), key.indexOf(";"));
 		}
 		
 		return val;
+	}
+	
+	public void loadBuffTypes(){
+		int x = 1;
+		try {
+			while(true){
+				InputStream is = Main.class.getResourceAsStream(RES_DIR + "buffs/" + x + ".cfg");
+				if(is==null){break;}
+				byte[] b = new byte[Main.class.getResource(RES_DIR + "buffs/" + x + ".cfg").openConnection().getContentLength()];
+				is.read(b);
+				is.close();
+				String s = new String(b);
+				BuffType buff = new BuffType(m, x);
+				
+				buff.setType(findValue(s,"type"));
+				buff.setDuration(Integer.parseInt(findValue(s,"duration")));
+				buff.setStackingType(findValue(s,"stackingType"));
+				buff.setGroupId(Integer.parseInt(findValue(s,"groupId")));
+				
+				if(buff.getType().equals(BuffType.BUFF_SLOW)){
+					buff.addArg("slow", Double.parseDouble(findValue(s,"slow")));
+				}
+				if(buff.getType().equals(BuffType.BUFF_FIRE)){
+					buff.addArg("damage", Double.parseDouble(findValue(s,"damage")));
+				}
+				
+				setNewBuffType(buff);
+				x++;
+			}
+		}
+		catch (MalformedURLException e) {e.printStackTrace();}
+		catch (IOException e) {e.printStackTrace();}
+		
 	}
 	
 	public void loadTowerTypes(){
@@ -391,28 +460,7 @@ import tower.TowerTypeme {
 				is.read(b);
 				is.close();
 				String s = new String(b);
-				TowerType t = new ToBuffpe(m, x);
-				
-				t.setType(findValue(s,"type"));
-				t.setAttackSpeed( Double.parseDouble(findValue(s,"attackSpbuff) );
-				t.setDamage( Double.parseDouble(findValue(s,"damage")) );
-				t.setProjectileSpeed( Double.parsbuffle(findValue(s,"projectileSpeed")) );
-				t.setProjectileAnimationStandDuration( Integer.parseInt(findValue(s, "projectileAnimBuffType buff = new BuffType(m, x);
-				
-				buff.setType(findValue(s,"type"));
-				buff.setDuration(Integer.parseInt(findValue(s,"duration")));
-				buff.setStackingType(Integer.parseInt(finfindValue(s,"stackingType"));
-				buff.setGroupId(Integer.parseInt(findValue(s,"groupIdff.getType().equals(BuffType.BUFF_SLOW)){
-					buff.addArg("slow", Double.parseDouble(findValue(s,"slow")));
-				}
-				
-				setNewBuffType(buffcOther(int delta){
-		if(getLives()<=0){
-			m.renderMode = Main.RENDER_MODE_MENU;
-		}
-		if( isTowerSelected() ){
-			if(getTowerSelectedSprite() != null){
-				TowerType(m, x);
+				TowerType t = new TowerType(m, x);
 				
 				t.setType(findValue(s,"type"));
 				t.setAttackSpeed( Double.parseDouble(findValue(s,"attackSpeed")) );
@@ -422,7 +470,8 @@ import tower.TowerTypeme {
 				t.setProjectileAnimationDeathDuration( Integer.parseInt(findValue(s, "projectileAnimationDeathDuration")) );
 				t.setRange( Double.parseDouble(findValue(s, "range")) );
 				t.setAnimationStandDuration( Integer.parseInt(findValue(s, "animationStandDuration")) );
-				t.setAnimationAttackDuration( Integer.parseInt(findValue(s, "animationAttackDuration")) );
+				t.setAnimationPreAttackDuration( Integer.parseInt(findValue(s, "animationPreAttackDuration")) );
+				t.setAnimationPostAttackDuration( Integer.parseInt(findValue(s, "animationPostAttackDuration")) );
 				t.setBase( findTowerTypeById(Integer.parseInt(findValue(s, "base"))) );
 				t.setCost( Integer.parseInt(findValue(s, "cost")) );
 				t.setDescription( findValue(s, "description") );
@@ -431,20 +480,20 @@ import tower.TowerTypeme {
 					t.addArg("maxTargets", Integer.parseInt(findValue(s, "maxTargets")));
 				if(t.getType().equals(TowerType.TOWER_TYPE_SIEGE))
 					t.addArg("splashRadius", Double.parseDouble(findValue(s, "splashRadius")));
-				if(t.getType().equals(TowerType.TOWER_TYPE_SLOW)){
-					t.addArg("slow", Double.parseDouble(findValue(s, "slow")));
-					t.addArg("slowDuration", Integer.parseInt(findValue(s, "slowDuration")));
-				}
-				////////////////////////////////////////////////////////
-				t.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-stand.png")) );
-				t.setAnimationAttack( ImageIO.read(Main.class.getResourceAsStDEBUFFER)){
+				if(t.getType().equals(TowerType.TOWER_TYPE_DEBUFFER)){
 					String s2 = findValue(s, "debuffs");
 					ArrayList<BuffType> debuffs = new ArrayList<BuffType>();
 					for(String s3 : s2.split(":")){
 						if(s3.equals("")) continue;
 						debuffs.add(findBuffTypeById(Integer.parseInt(s3)));
 					}
-					t.addArg("debuffs", debuffsx + "-projectileStand.png")) );
+					t.addArg("debuffs", debuffs);
+				}
+				////////////////////////////////////////////////////////
+				t.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-stand.png")) );
+				t.setAnimationPreAttack( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-preAttack.png")) );
+				t.setAnimationPostAttack( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-postAttack.png")) );
+				t.setProjectileAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-projectileStand.png")) );
 				t.setProjectileAnimationDeath( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "towers/" + x + "-projectileDeath.png")) );
 				setNewTowerType(t);
 				x++;
@@ -478,31 +527,35 @@ import tower.TowerTypeme {
 				npc.setAnimationWalkDuration( Integer.parseInt(findValue(s, "animationWalkDuration")) );
 				npc.setAnimationDeathDuration( Integer.parseInt(findValue(s, "animationDeathDuration")) );
 				npc.setPerWave( Integer.parseInt(findValue(s, "perWave")) );
+				npc.setBetweenSpawns( Integer.parseInt(findValue(s, "betweenSpawns")) );
 				npc.setBounty( Integer.parseInt(findValue(s, "bounty")) );
+				npc.setDescription( findValue(s, "description") );
 				npc.setType( findValue(s, "type") );
 				npc.setFlying( Boolean.parseBoolean(findValue(s, "flying")) );
 				if(npc.getType().equals(NPCType.NPC_TYPE_REVIVE))
 					npc.addArg( "reviveTimer", Integer.parseInt(findValue(s, "reviveTimer")) );
 				if(npc.getType().equals(NPCType.NPC_TYPE_REVIVE))
 					npc.addArg( "animationReviveDuration", Integer.parseInt(findValue(s, "animationReviveDuration")) );
-				if(npc.getTypeetweenSpawns( Integer.parseInt(findValue(s, "betweenSpawns;
 				if(npc.getType().equals(NPCType.NPC_TYPE_FINAL))
 					npc.addArg( "maxLife", Integer.parseInt(findValue(s, "maxLife")) );
 				if(npc.getType().equals(NPCType.NPC_TYPE_FINAL))
 					npc.addArg( "increment", Double.parseDouble(findValue(s, "increment")) );
+				if(npc.getType().equals(NPCType.NPC_TYPE_RESISTANT)){
+					String s2 = findValue(s, "against");
+					Map<Integer, Double> Map = new HashMap<Integer, Double>();
+					for(String s3 : s2.split(":")){
+						if(s3.equals("")) continue;
+						String buff = s3.split(">>")[0];
+						String value = s3.split(">>")[1];
+						Map.put(Integer.parseInt(buff),Double.parseDouble(value));
+					}
+					npc.addArg("against", Map);
+				}
 				////////////////////////////////////////////////////////
 				npc.setAnimationStand( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-stand.png")) );
 				npc.setAnimationWalk( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-walk.png")) );
 				npc.setAnimationDeath( ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-death.png")) );
-				if(npc.getType().equals(NPCType.NPC_TYPE_REVIif(npc.getType().equals(NPCType.NPC_TYPE_RESISTANT)){
-					String s2 = findValue(s, "against");
-					@SuppressWarnings("rawtypes")
-					Map<ClMap<Integer, Double> Map = new HashMap<Integer("%")){
-						if(s3.equals("")) continue;
-						String buff = s3.split(":")[0];
-						String value = s3.split(":")[1];
-						Map.put(Buff.types.get(bufTypef),Double.parseDouble(valInteger.parseIn	npc.addArg("against", Map);
-				}E_REVIVE))
+				if(npc.getType().equals(NPCType.NPC_TYPE_REVIVE))
 					npc.addArg("animationRevive", ImageIO.read(Main.class.getResourceAsStream(RES_DIR + "npcs/" + x + "-revive.png")));
 				setNewNPCType(npc);
 				x++;
@@ -526,9 +579,9 @@ import tower.TowerTypeme {
 	
 	public void logicOther(int delta){
 		if(getLives()<=0){
-			m.renderMode = Main.RENDER_MODE_MENU;
+			m.scoreScreen();
 		}
-		if( isTowerSelected() ){
+		if( isTowerSelected() && getTowerSelectedImage()!=null){
 			if(getTowerSelectedSprite() != null){
 				destroySprite(getTowerSelectedSprite());
 			}
@@ -546,24 +599,20 @@ import tower.TowerTypeme {
 	}
 	
 	public void logicNPCs(int delta){
-		if(getLastNPC()!=null){
-		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
+		for(NPC npc : getNpcs()){
 			npc.logic(delta);
-		}
 		}
 	}
 	
 	public void logicTowers(int delta){
-		for(Tower tower = getLastTower();tower!=null;tower=tower.getPrevious()){
+		for(Tower tower : getTowers()){
 			tower.logic(delta);
 		}
 	}
 	
 	public void logicProjectiles(int delta){
-		if(getLastProjectile()!=null){
-		for(Projectile p = getLastProjectile();p!=null;p=p.getPrevious()){
+		for(Projectile p : getProjectiles()){
 			p.move(delta);
-		}
 		}
 	}
 	
@@ -609,58 +658,34 @@ import tower.TowerTypeme {
 	public void renderObjects(int delta){
 		Graphics g = m.backbufferG;
 		
-		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
-			if(npc.getX()+npc.getAnimationStand().getWidth()>offsetXF&&
-			   npc.getX()<offsetXF+m.width&&
-			   npc.getY()+npc.getAnimationStand().getWidth()>offsetYF&&
-			   npc.getY()<offsetYF+m.height)
+		for(NPC npc : getNpcs()){
 			npc.drawLogic(delta);
 		}
-		for(Tower tower = getLastTower();tower!=null;tower=tower.getPrevious()){
-			if(tower.getX()+tower.getAnimationStand().getWidth()>offsetXF&&
-			   tower.getX()<offsetXF+m.width&&
-			   tower.getY()+tower.getAnimationStand().getWidth()>offsetYF&&
-			   tower.getY()<offsetYF+m.height)
+		for(Tower tower : getTowers()){
 				tower.drawLogic(delta);
 		}
-		for(Projectile p = getLastProjectile();p!=null;p=p.getPrevious()){
-			if(p.getX()+p.getAnimationStand().getWidth()>offsetXF&&
-			   p.getX()<offsetXF+m.width&&
-			   p.getY()+p.getAnimationStand().getWidth()>offsetYF&&
-			   p.getY()<offsetYF+m.height)
+		for(Projectile p : getProjectiles()){
 				p.drawLogic(delta);
 		}
 		
-		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+		for( Sprite s : getSprites() ){
 			if( ! (s.getOwner() instanceof Button) &&
 				! (s.getOwner() instanceof Game) &&
 				! (s.getOwner() instanceof Projectile)){
-				if(s.getX()+s.getImage().getWidth()>offsetXF&&
-				   s.getX()<offsetXF+m.width&&
-				   s.getY()+s.getImage().getHeight()>offsetYF&&
-				   s.getY()<offsetYF+m.height)
 					s.draw(g, (int)offsetXF, (int)offsetYF);
 			}
 		}
-		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+		for( Sprite s : getSprites() ){
 			if( (s.getOwner() instanceof Projectile) ){
-				if(s.getX()+s.getImage().getWidth()>offsetXF&&
-				   s.getX()<offsetXF+m.width&&
-				   s.getY()+s.getImage().getHeight()>offsetYF&&
-				   s.getY()<offsetYF+m.height)
 					s.draw(g, (int)offsetXF, (int)offsetYF);
 			}
 		}
 		
-		for( Animation a = getLastAnimation(); a != null; a = a.getPrevious() ){
-			if(a.getX()+a.getImage().getWidth()>offsetXF&&
-			   a.getX()<offsetXF+m.width&&
-			   a.getY()+a.getImage().getWidth()>offsetYF&&
-			   a.getY()<offsetYF+m.height)
+		for( Animation a : getAnimations() ){
 			a.draw(g, (int)offsetXF, (int)offsetYF, delta);
 		}
 		
-		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
+		for(NPC npc : getNpcs()){
 			g.setColor(Color.red);
 			g.fillRect((int) (npc.getX()-offsetXF),(int) (npc.getY()-offsetYF),getTileWidth(),getTileWidth()/5);
 			g.setColor(Color.cyan);
@@ -671,7 +696,7 @@ import tower.TowerTypeme {
 	public void renderAboveAll(int delta){
 		Graphics g = m.backbufferG;
 		
-		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+		for( Sprite s : getSprites() ){
 			if( s.getOwner() instanceof Game ){
 				s.draw(g, 0, 0);
 			}
@@ -684,7 +709,7 @@ import tower.TowerTypeme {
 		
 		Graphics g = m.backbufferG;
 		
-		g.setColor(Color.white);
+		g.setColor(Color.black);
 		g.fillRect(0, 0, m.width, m.height);
 		
 		if(currentMap.getImage() != null){
@@ -724,22 +749,27 @@ import tower.TowerTypeme {
 	public void renderOverlay(int delta){
 		Graphics g = m.backbufferG;
 		
+		g.setFont(new Font("arial",Font.PLAIN, 12));
 		g.setColor(Color.darkGray);
 		g.fillRect(m.width-panelWidth, 0, panelWidth, m.height);
 		g.fillRect(0, m.height-panelHeight, m.width, panelHeight);
 		
 		g.setColor(Color.white);
-		g.drawString("Money: " + money, m.width-panelWidth, panelWidth+getMarginMinimap()*2);
+		g.drawString("Money: " + getMoney(), m.width-panelWidth, panelWidth+getMarginMinimap()*2);
 		g.drawString("Lives: " + lives, m.width-panelWidth+75, panelWidth+getMarginMinimap()*2);
-		g.drawString("Next Wave: " + nextWave.getTime()/1000 + "s", getMarginMinimap()*2, m.height-panelHeight+getMarginMinimap()*2);
+		String nextWaveStatus = "";
+		if(getWaveId()==-1){nextWaveStatus = "Try to stay alive as long as possible!";}
+		else if(nextWave.getRepeat()==0){nextWaveStatus = "Slay all the creatures!";}
+		else{nextWaveStatus = nextWave.getTime()/1000 + "s";}
+		g.drawString("Next Wave: " + nextWaveStatus, getMarginMinimap()*2, m.height-panelHeight+getMarginMinimap()*2);
 		g.drawString(getStatus(), marginMinimap*2, m.height-marginMinimap*4);
 		g.drawString(getAdditionalStatus(), marginMinimap*2, m.height-panelHeight+marginMinimap*5);
 		
-		for(Button b = getLastButton();b!=null;b=b.getPrevious()){
+		for( Button b : getButtons() ){
 			b.drawLogic();
 		}
 		
-		for( Sprite s=getLastSprite(); s!=null; s=s.getPrevious() ){
+		for( Sprite s : getSprites() ){
 			if( s.getOwner() instanceof Button ){
 				s.draw(g, 0, 0);
 			}
@@ -766,11 +796,11 @@ import tower.TowerTypeme {
 		}
 		}
 		
-		for(NPC npc = getLastNPC();npc!=null;npc=npc.getPrevious()){
+		for(NPC npc : getNpcs()){
 			g.setColor(Color.red);
 			g.fillRect( (int)(npc.getX()), (int)(npc.getY()), getTileWidth(), getTileWidth() );
 		}
-		for(Tower tower = getLastTower();tower!=null;tower=tower.getPrevious()){
+		for(Tower tower : getTowers()){
 			g.setColor(Color.gray);
 			g.fillRect( (int)(tower.getX()), (int)(tower.getY()), getTileWidth(), getTileWidth() );
 		}
@@ -801,12 +831,21 @@ import tower.TowerTypeme {
 		return String.valueOf(map);
 	}
 	
-	public void handleInput(int delta){
-		//1 - Left Click
-		//2 - Middle Click
-		//3 - Right Click
-		if(m.mouseDown[1]){
-			
+	public void keyTyped(KeyEvent e){
+		
+	}
+	
+	public void keyPressed(KeyEvent e) {
+		for(Button b : getButtons()){
+			b.key(e.getKeyCode());
+		}
+	}
+
+	public void keyReleased(KeyEvent e) {}
+	
+	public void mousePressed(MouseEvent e){
+		if(e.getButton() == MouseEvent.BUTTON1){
+			destroySprite(getTooltip()); setTooltip(null);
 			if(isTowerSelected()){
 				if(isCursorInPlayingField()){
 					if( isBuildable(getTile(getTowerSelectedX(), getTowerSelectedY())) &&
@@ -821,126 +860,183 @@ import tower.TowerTypeme {
 			}
 			else{
 				if(isCursorInPlayingField()){
-					boolean isUpgrade = false;
-					for(Tower t = getLastTower();t!=null;t=t.getPrevious()){
-						if(m.mousePoint.x>t.getX()-offsetXF&&
-						   m.mousePoint.x<t.getX()-offsetXF+getTileWidth()&&
-						   m.mousePoint.y>t.getY()-offsetYF&&
-						   m.mousePoint.y<t.getY()-offsetYF+getTileWidth()){
-							isUpgrade = true;
-							destroyUpgradeButtons();
-							ArrayList<TowerType> upgrades = findUpgradesForTower(t.getTowerType());
-							int buttonX = panelWidth;
-							int buttonY = m.height-panelHeight+marginMinimap*2;
-							final Tower t2=t;
-							Button sell = new Button(m,buttonX,buttonY,getTileWidth(),getTileWidth(),imageSell,t){
-								public void run() {
-									t2.sell();
-									destroyUpgradeButtons();
-								}
-							};
-							sell.setDes(BUTTON_SELL_DESC);
-							setNewButton(sell);
-							buttonX += getTileWidth()+marginMinimap;
-							for(int loop=0;loop<upgrades.size();loop++){
-								final TowerType t3=upgrades.get(loop);
-								Button b = new Button(m,buttonX,buttonY,getTileWidth(),getTileWidth(),Animation.getImagePhase(upgrades.get(loop).getAnimationStand(),0,m),t){
-									public void run() {
-										t2.upgradeTo(t3);
-										destroyUpgradeButtons();
-									}
-								};
-								setNewButton(b);
-								buttonX += getTileWidth()+marginMinimap;
-							}
+					destroyUpgradeButtons();
+					for(Tower t : getTowers()){
+						if(e.getPoint().x>t.getX()-offsetXF&&
+						   e.getPoint().x<t.getX()-offsetXF+getTileWidth()&&
+						   e.getPoint().y>t.getY()-offsetYF&&
+						   e.getPoint().y<t.getY()-offsetYF+getTileWidth()){
+							createUpgradeButtons(t);
+							constructTooltip(t.getTowerType().getDescription());
 						}
 					}
-					if(!isUpgrade){
-						destroyUpgradeButtons();
+					for(NPC n : getNpcs()){
+						if(e.getPoint().x>n.getX()-offsetXF&&
+						   e.getPoint().x<n.getX()-offsetXF+getTileWidth()&&
+						   e.getPoint().y>n.getY()-offsetYF&&
+						   e.getPoint().y<n.getY()-offsetYF+getTileWidth()){
+							constructTooltip(n.getNPCType().getDescription());
+						}
 					}
 				}
 			}
 			
+			for(Button b : getButtons()){
+				b.click(e.getPoint().x, e.getPoint().y);
+			}
+		}
+	}
+	
+	public void handleInput(int delta){
+		//1 - Left Click
+		//2 - Middle Click
+		//3 - Right Click
+		if(m.mouseDown[1]){
 			if(m.mouseStart.x>=m.width-panelWidth+getMarginMinimap()&&
-				m.mouseStart.x<=m.width-getMarginMinimap()&&
-				m.mouseStart.y>=getMarginMinimap()&&
-				m.mouseStart.y<=panelWidth-getMarginMinimap())
-			{
-				offsetXF = (m.mousePoint.x-m.width+panelWidth-getMarginMinimap()
-						-0.5f*(m.width-panelWidth)/(double)mapGraphicWidth*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
-						*(mapGraphicWidth/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
-				if(offsetXF>=maxOffsetX){offsetXF=maxOffsetX;}
-				if(offsetXF<=minOffsetX){offsetXF=minOffsetX;}
-				
-				offsetYF = (m.mousePoint.y-getMarginMinimap()
-						-0.5f*(m.height-panelHeight)/(double)mapGraphicHeight*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
-						*(mapGraphicHeight/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
-				if(offsetYF>=maxOffsetY){offsetYF=maxOffsetY;}
-				if(offsetYF<=minOffsetY){offsetYF=minOffsetY;}
-			}
-			
-			for(Button b = getLastButton();b!=null;b=b.getPrevious()){
-				b.click(m.mousePoint.x, m.mousePoint.y);
-			}
+					m.mouseStart.x<=m.width-getMarginMinimap()&&
+					m.mouseStart.y>=getMarginMinimap()&&
+					m.mouseStart.y<=panelWidth-getMarginMinimap())
+				{
+					offsetXF = (m.mousePoint.x-m.width+panelWidth-getMarginMinimap()
+							-0.5f*(m.width-panelWidth)/(double)mapGraphicWidth*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
+							*(mapGraphicWidth/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
+					if(offsetXF>=maxOffsetX){offsetXF=maxOffsetX;}
+					if(offsetXF<=minOffsetX){offsetXF=minOffsetX;}
+					
+					offsetYF = (m.mousePoint.y-getMarginMinimap()
+							-0.5f*(m.height-panelHeight)/(double)mapGraphicHeight*(panelWidth-getMarginMinimap()*2)) //Drag the center of the minimap square
+							*(mapGraphicHeight/(double)(panelWidth-getMarginMinimap()*2)); //How many times bigger is the main screen than the minimap
+					if(offsetYF>=maxOffsetY){offsetYF=maxOffsetY;}
+					if(offsetYF<=minOffsetY){offsetYF=minOffsetY;}
+				}
 		}
 		
 		else{
-			if(getTooltip()!=null){
+			/*if(getTooltip()!=null){
 				destroySprite(getTooltip());
 				setTooltip(null);
-			}
-			for(Button b = getLastButton();b!=null;b=b.getPrevious()){
+			}*/
+			for(Button b : getButtons()){
 				if(b.isHere(m.mousePoint.x, m.mousePoint.y)){
-					BufferedImage img = new BufferedImage(getPanelWidth()-marginMinimap*2, getPanelHeight()-marginMinimap*2, BufferedImage.TYPE_INT_ARGB);
-					Graphics g = img.getGraphics();
-					g.setColor(Color.yellow);
-					g.fillRect(0, 0, getPanelWidth()-marginMinimap*2, getPanelWidth()-marginMinimap*2);
-					g.setColor(Color.black);
-					g.drawRect(0, 0, getPanelWidth()-marginMinimap*2, getPanelWidth()-marginMinimap*2);
-					g.setFont(new Font("monospaced", Font.PLAIN, getPanelWidth()/10));
-					int y = 2;
-					int x = 2;
-					for (String line : b.getDes().split("\n")){
-						y += g.getFontMetrics().getHeight();
-						x = 2;
-						for(String command : line.split("%")){
-							if(command.startsWith("FontSize:")){
-								g.setFont(new Font(g.getFont().getFontName(), g.getFont().getStyle(), Integer.parseInt(command.substring(command.indexOf(":")+1))));
-							}
-							else{
-								g.drawString(command, x, y);
-								x+=command.length()*g.getFontMetrics().getWidths()[0];
-							}
-						}
-					}
-					g.dispose();
-					setTooltip(new Sprite(m, m.width-getPanelWidth()+marginMinimap, m.height-getPanelHeight()+marginMinimap, img, this, false));
-					setNewSprite(getTooltip());
+					constructTooltip(b.getDes());
 					break;
 				}
 			}
 		}
 		
-		if(m.keyDown[KeyEvent.VK_LEFT]||m.keyDown[KeyEvent.VK_A]){
+		if(m.keyDown[KeyEvent.VK_LEFT]){
 			offsetXF-=delta*m.keySensitivity;
 			if(offsetXF<=minOffsetX){offsetXF=minOffsetX;}
 		}
-		if(m.keyDown[KeyEvent.VK_RIGHT]||m.keyDown[KeyEvent.VK_D]){
+		if(m.keyDown[KeyEvent.VK_RIGHT]){
 			offsetXF+=delta*m.keySensitivity;
 			if(offsetXF>=maxOffsetX){offsetXF=maxOffsetX;}
 		}
-		if(m.keyDown[KeyEvent.VK_UP]||m.keyDown[KeyEvent.VK_W]){
+		if(m.keyDown[KeyEvent.VK_UP]){
 			offsetYF-=delta*m.keySensitivity;
 			if(offsetYF<=minOffsetY){offsetYF=minOffsetY;}
 		}
-		if(m.keyDown[KeyEvent.VK_DOWN]||m.keyDown[KeyEvent.VK_S]){
+		if(m.keyDown[KeyEvent.VK_DOWN]){
 			offsetYF+=delta*m.keySensitivity;
 			if(offsetYF>=maxOffsetY){offsetYF=maxOffsetY;}
 		}
 	}
+	private void constructTooltip(String description){
+		BufferedImage img = new BufferedImage(getPanelWidth()-marginMinimap*2, getPanelHeight()-marginMinimap*2, BufferedImage.TYPE_INT_ARGB);
+		Graphics g = img.getGraphics();
+		g.setColor(Color.yellow);
+		g.fillRect(0, 0, getPanelWidth()-marginMinimap*2, getPanelWidth()-marginMinimap*2);
+		g.setColor(Color.black);
+		g.drawRect(0, 0, getPanelWidth()-marginMinimap*2, getPanelWidth()-marginMinimap*2);
+		g.setFont(new Font("arial", Font.PLAIN, getPanelWidth()/10));
+		int y = 2;
+		int x = 2;
+		for (String line : description.split("\n")){
+			y += g.getFontMetrics().getHeight();
+			x = 2;
+			for(String command : line.split("<c>")){
+				if(command.equals("")) continue;
+				if(command.startsWith("FontSize:")){
+					g.setFont(new Font("arial", g.getFont().getStyle(), Integer.parseInt(command.substring(command.indexOf(":")+1))));
+				}
+				else if(command.startsWith("Var:")){
+					
+					String com = command.replace("Var:", "");
+					InputStream is = Main.class.getResourceAsStream(RES_DIR + com.substring(0, com.lastIndexOf("->")));
+					byte[] b;
+					String s = "";
+					try {
+						b = new byte[Main.class.getResource(RES_DIR + com.substring(0, com.lastIndexOf("->"))).openConnection().getContentLength()];
+						is.read(b);
+						is.close();
+						s = new String(b);
+					} catch (IOException e) {e.printStackTrace();}
+					String val = findValue(s, com.substring(com.lastIndexOf("->")+2));
+					
+					g.drawString(val, x, y);
+					x+=g.getFontMetrics().stringWidth(val);
+				}
+				else if(command.equals("Bold")){
+					g.setFont(new Font("arial", Font.BOLD, g.getFont().getSize()));
+				}
+				else if(command.equals("Plain")){
+					g.setFont(new Font("arial", Font.PLAIN, g.getFont().getSize()));
+				}
+				else if(command.equals("Green")){
+					g.setColor(Color.green);
+				}
+				else if(command.equals("Black")){
+					g.setColor(Color.black);
+				}
+				else if(command.equals("Red")){
+					g.setColor(Color.red);
+				}
+				else{
+					g.drawString(command, x, y);
+					x+=g.getFontMetrics().stringWidth(command);
+				}
+			}
+		}
+		g.dispose();
+		
+		destroySprite(getTooltip());
+		setTooltip(new Sprite(m, m.width-getPanelWidth()+marginMinimap, m.height-getPanelHeight()+marginMinimap, img, this, false));
+		setNewSprite(getTooltip());
+	}
+
+	private void createUpgradeButtons(Tower t){
+		if(t==null){return;}
+		ArrayList<TowerType> upgrades = findUpgradesForTower(t.getTowerType());
+		int buttonX = panelWidth;
+		int buttonY = m.height-panelHeight+marginMinimap*4;
+		final Tower t2=t;
+		Button sell = new Button(m,buttonX,buttonY,getTileWidth(),getTileWidth(),imageSell,t){
+			public void run() {
+				t2.sell();
+				destroyUpgradeButtons();
+			}
+		};
+		sell.setKeybind(KeyEvent.VK_S);
+		sell.setDes(BUTTON_SELL_DESC);
+		setNewButton(sell);
+		buttonX += getTileWidth()+marginMinimap;
+		for(int loop=0;loop<upgrades.size();loop++){
+			final TowerType t3=upgrades.get(loop);
+			Button b = new Button(m,buttonX,buttonY,getTileWidth(),getTileWidth(),Animation.getImagePhase(upgrades.get(loop).getAnimationStand(),0,m),t){
+				public void run() {
+					destroyUpgradeButtons();
+					createUpgradeButtons(t2.upgradeTo(t3));
+				}
+			};
+			if(upgrades.size()==1){b.setKeybind(KeyEvent.VK_U);}
+			b.setDes(t3.getDescription());
+			setNewButton(b);
+			buttonX += getTileWidth()+marginMinimap;
+		}
+	}
 	
 	private void destroyUpgradeButtons(){
-		for(Button b=getLastButton();b!=null;b=b.getPrevious()){
+		for(Button b : getButtons()){
 			if(b.getOwner() instanceof Tower){
 				b.destroy();
 			}
@@ -950,7 +1046,7 @@ import tower.TowerTypeme {
 	private ArrayList<TowerType> findUpgradesForTower(TowerType towerType){
 		ArrayList<TowerType> ret = new ArrayList<TowerType>();
 		
-		for(TowerType t=getLastTowerType();t!=null;t=t.getPrevious()){
+		for(TowerType t : getTowerTypes()){
 			if(t.getBase()==towerType){
 				ret.add(t);
 			}
@@ -960,7 +1056,7 @@ import tower.TowerTypeme {
 	}
 	
 	private boolean isTowerOn(int x, int y) {
-		for(Tower t = getLastTower();t!=null;t = t.getPrevious()){
+		for(Tower t : getTowers()){
 			if(t.getX() / getTileWidth() == x &&
 			   t.getY() / getTileWidth() == y){
 				return true;
@@ -996,226 +1092,26 @@ import tower.TowerTypeme {
 	public void setTileWidth(int tileWidth){
 		this.tileWidth = tileWidth;
 	}
-
-	public Projectile getLastProjectile() {
-		return lastProjectile;
-	}
-
-	public void setLastProjectile(Projectile lastProjectile) {
-		this.lastProjectile = lastProjectile;
-	}
-
-	public void setNewProjectile(Projectile p){
-		if(getLastProjectile()!=null){
-			getLastProjectile().setNext(p);
-			p.setPrevious(getLastProjectile());
-		}
-		setLastProjectile(p);
-	}
-	
-	public void setNewNPC(NPC npc){
-		if(getLastNPC()!=null){
-			getLastNPC().setNext(npc);
-			npc.setPrevious(getLastNPC());
-		}
-		setLastNPC(npc);
-	}
-	
-	public void destroyProjectile(Projectile p){
-		if(getLastProjectile().equals(p)){
-			setLastProjectile(p.getPrevious());
-		}
-		if(p.getPrevious()!=null){p.getPrevious().setNext(p.getNext());}
-		if(p.getNext()!=null){p.getNext().setPrevious(p.getPrevious());}
-	}
-	
-	public void destroyNPC(NPC npc){
-		if(getLastProjectile()!=null){
-		for(Projectile p = getLastProjectile();p!=null;p=p.getPrevious()){
-			if(p.getTarget()!=null){
-				if(p.getTarget().equals(npc)){
-					p.setTarget(null); p.setTargetX(npc.getX()); p.setTargetY(npc.getY());
-				}
-			}
-		}
-		}
-		
-		for(Sprite s = getLastSprite();s!=null;s=s.getPrevious()){
-			if(s.getOwner().equals(npc)){destroySprite(s);}
-		}
-		
-		if(getLastNPC().equals(npc)){
-			setLastNPC(npc.getPrevious());
-		}
-		if(npc.getPrevious()!=null){npc.getPrevious().setNext(npc.getNext());}
-		if(npc.getNext()!=null){npc.getNext().setPrevious(npc.getPrevious());}
-	}
-	
-	public void setNewSprite(Sprite s){
-		if(getLastSprite()!=null){
-			getLastSprite().setNext(s);
-			s.setPrevious(getLastSprite());
-		}
-		setLastSprite(s);
-	}
-	
-	public void destroySprite(Sprite s){
-		if(getLastSprite().equals(s)){
-			setLastSprite(s.getPrevious());
-		}
-		if(s.getPrevious()!=null){s.getPrevious().setNext(s.getNext());}
-		if(s.getNext()!=null){s.getNext().setPrevious(s.getPrevious());}
-		s.setImage(null);
-	}
-	
-	public void setNewTower(Tower t){
-		if(getLastTower()!=null){
-			getLastTower().setNext(t);
-			t.setPrevious(getLastTower());
-		}
-		setLastTower(t);
-	}
-	
-	public void destroyTower(Tower t){
-		if(getLastTower().equals(t)){
-			setLastTower(t.getPrevious());
-		}
-		if(t.getPrevious()!=null){t.getPrevious().setNext(t.getNext());}
-		if(t.getNext()!=null){t.getNext().setPrevious(t.getPrevious());}
-		
-		for(Sprite s = getLastSprite();s!=null;s=s.getPrevious()){
-			if(s.getOwner().equals(t)){destroySprite(s);}
-		}
-	}
-	
-	public void setNewAnimation(Animation a){
-		if(getLastAnimation()!=null){
-			getLastAnimation().setNext(a);
-			a.setPrevious(getLastAnimation());
-			
-		}
-		setLastAnimation(a);
-	}
-	
-	public void destroyAnimation(Animation a){
-		if(getLastAnimation().equals(a)){
-			setLastAnimation(a.getPrevious());
-		}
-		if(a.getPrevious()!=null){a.getPrevious().setNext(a.getNext());}
-		if(a.getNext()!=null){a.getNext().setPrevious(a.getPrevious());}
-		a.setImage(null);
-	}
-
-	public void setNewTowerType(TowerType t){
-		if(getLastTowerType()!=null){
-			getLastTowerType().setNext(t);
-			t.setPrevious(getLastTowerType());
-		}
-		setLastTowerType(t);
-	}
-	
-	public void destroyTowerType(TowerType t){
-		if(getLastTowerType().equals(t)){
-			setLastTowerType(t.getPrevious());
-		}
-		if(t.getPrevious()!=null){t.getPrevious().setNext(t.getNext());}
-		if(t.getNext()!=null){t.getNext().setPrevious(t.getPrevious());}
-	}
-	
-	public void destroyNPCType(NPCType npc){
-		if(getLastNPCType().equals(npc)){
-			setLastNPCType(npc.getPrevious());
-		}
-		if(npc.getPrevious()!=null){npc.getPrevious().setNext(npc.getNext());}
-		if(npc.getNext()!=null){npc.getNext().setPrevious(npc.getPrevious());}
-	}
-	
-	public void setNewNPCType(NPCType npc){
-		if(getLastNPCType()!=null){
-			getLastNPCType().setNext(npc);
-			npc.setPrevious(getLastNPCType());
-		}
-		setLastNPCType(npc);
-	}
-
-	public NPC getLastNPC() {
-		return lastNPC;
-	}
-
-	public void setLastNPC(NPC lastNPC) {
-		this.lastNPC = lastNPC;
-	}
-
-	public Sprite getLastSprite() {
-		return lastSprite;
-	}
-
-	public void setLastSprite(Sprite lastSprite) {
-		this.lastSprite = lastSprite;
-	}
-
-	public Tower getLastTower() {
-		return lastTower;
-	}
-
-	public void setLastTower(Tower lastTower) {
-		this.lastTower = lastTower;
-	}
-
-	public Animation getLastAnimation() {
-		return lastAnimation;
-	}
-
-	public void setLastAnimation(Animation lastAnimation) {
-		this.lastAnimation = lastAnimation;
-	}
-
-	public TowerType getLastTowerType() {
-		return lastTowerType;
-	}
-
-	public void setLastTowerType(TowerType lastTowerType) {
-		this.lastTowerType = lastTowerType;
-	}
 	
 	public TowerType findTowerTypeById (int id) {
-		for(TowerType t=getLastTowerType();t!=null;t=t.getPrevious()){
+		for(TowerType t : getTowerTypes()){
 			if(t.getId()==id){return t;}
 		}
 		return null;
 	}
 	
 	public NPCType findNPCTypeById (int id) {
-		for(NPCType npc=getLastNPCType();npc!=null;npc=npc.getPrevious()){
+		for(NPCType npc : getNPCTypes()){
 			if(npc.getId()==id){return npc;}
 		}
 		return null;
 	}
-
-	public NPCType getLastNPCType() {
-		returvoid destroyBuffType(BuffType b){
-		if(getLastBuffType().equals(b)){
-			setLastBuffTypee towerSelectedImage) {
-		this.towerSelectedImage = towerSelectedImage;
-	}
-
-	public int getTowerSelectedX() {
-		return towerSelectedX;
-	}
-
-	public void setTowerSelectedX(int towerSelectedX)ffType(BuffType b){
-		if(getLastBuffType()!=null){
-			getLastBuffType().setNext(b);
-			b.setPrevious(getLastBuffType());
+	
+	public BuffType findBuffTypeById (int id) {
+		for(BuffType b : getBuffTypes()){
+			if(b.getId()==id){return b;}
 		}
-		setLastBuffType(b);
-	}
-	 {
-		return lastNPCType;
-	}
-
-	public void setLastNPCType(NPCType lastNPCType) {
-		this.lastNPCType = lastNPCType;
+		return null;
 	}
 
 	public int getNumberNPC() {
@@ -1239,8 +1135,9 @@ import tower.TowerTypeme {
 			setNewTower(to);
 			t = to;
 		}
-		else if( type.equals(TowerType.TOWER_TYPE_SLOW) ){
-			TowerSlow to = new TowerSlow(m,0,0,towerType,(Double) towerType.getArg("slow"), (Integer) towerType.getArg("slowDuration"));
+		else if( type.equals(TowerType.TOWER_TYPE_DEBUFFER) ){
+			@SuppressWarnings("unchecked")
+			TowerDebuffer to = new TowerDebuffer(m,0,0,towerType,(ArrayList<BuffType>)towerType.getArg("debuffs"));
 			setNewTower(to);
 			t = to;
 		}
@@ -1253,16 +1150,13 @@ import tower.TowerTypeme {
 		
 		return t;
 	}
-	
+
+	@SuppressWarnings("unchecked")
 	public NPC createNPC(NPCType npcType){
-		Str	
-	public BuffType findBuffTypeById (int id) {
-		for(BuffType b=getLastBuffType();b!=null;b=b.getPrevious()){
-			if(b.getId()==id){return bteNPC(NPCType npcType){
 		String type = npcType.getType();
 		NPC npc;
 		if( type.equals(NPCType.NPC_TYPE_REVIVE) ){
-			NPC npco = new NPCRevive(m,0,0,npcType,
+			NPCRevive npco = new NPCRevive(m,0,0,npcType,
 					(Integer) npcType.getArg("reviveTimer"),
 					(BufferedImage)npcType.getArg("animationRevive"),
 					(Integer)npcType.getArg("animationReviveDuration"));
@@ -1270,7 +1164,12 @@ import tower.TowerTypeme {
 			npc = npco;
 		}
 		else if( type.equals(NPCType.NPC_TYPE_FINAL) ){
-			NPC npco = new NPCFinal(m,0,0,npcType,getFinalsSpawned());
+			NPCFinal npco = new NPCFinal(m,0,0,npcType,getFinalsSpawned());
+			setNewNPC(npco);
+			npc = npco;
+		}
+		else if( type.equals(NPCType.NPC_TYPE_RESISTANT) ){
+			NPCResistant npco = new NPCResistant(m,0,0,npcType,(java.util.Map<Integer,Double>)npcType.getArg("against"));
 			setNewNPC(npco);
 			npc = npco;
 		}
@@ -1284,32 +1183,12 @@ import tower.TowerTypeme {
 		return npc;
 	}
 	
-	public void destroyButton(Button b){
-		if(getLastButton().equals(b)){
-			setLastButton(b.getPrevious());
-		}
-		if(b.getPrevious()!=null){b.getPrevious().setNext(b.getNext());}
-		if(b.getNext()!=null){b.getNext().setPDEBUFFER) ){
-			@SuppressWarnings("unchecked")
-			TowerDebuffer to = new TowerDebuffer(m,0,0,towerType,(ArrayList<BuffType>)towerType.getArg("debuffs.setPrevious(getLastButton());
-		}
-		setLastButton(b);
-	}
-
-	public Button getLastButton() {
-		return lastButton;
-	}
-
-	public void setLastButton(Button lastButton) {
-		this.l@SuppressWarnings("unchecked")s.lastButton = lastButton;
-	}
-	
 	public int getPanelWidth() {
 		return panelWidth;
 	}
 
 	public void setPanelWidth(int panelWidth) {
-		this.panelReviveWidth = panelWidth;
+		this.panelWidth = panelWidth;
 	}
 
 	public int getPanelHeight() {
@@ -1325,16 +1204,11 @@ import tower.TowerTypeme {
 	}
 
 	public void setTowerSelected(boolean towerSelected) {
-		this.towerSeFinallected = towerSelected;
+		this.towerSelected = towerSelected;
 	}
 
 	public Sprite getTowerSelectedSprite() {
 		return towerSelectedSprite;
-	}
-
-	 if( type.equals(NPCType.NPC_TYPE_RESISTANT) ){
-			@SuppressWarnings("rawtypes")
-			NPCResistant npco = new NPCResisNPCResistant npco = new NPCResistant(m,0,0,npcType,(java.util.Map<IntegerelectedSprite;
 	}
 
 	public void setTowerSelectedSprite(Sprite towerSelectedSprite) {
@@ -1374,11 +1248,11 @@ import tower.TowerTypeme {
 	}
 
 	public int getMoney() {
-		return money;
+		return money/2;
 	}
 
 	public void setMoney(int money) {
-		this.money = money;
+		this.money = money*2;
 	}
 
 	public int getMarginMinimap() {
@@ -1444,12 +1318,12 @@ import tower.TowerTypeme {
 	}
 
 	public int getFinalsKilled() {
-		return finalsKilled;
+		return finalsKilled/2;
 	}
 
 	public void setFinalsKilled(int finalsKilled) {
 		setAdditionalStatus("Finals killed: " + finalsKilled);
-		this.finalsKilled = finalsKilled;
+		this.finalsKilled = finalsKilled*2;
 	}
 
 	public String getAdditionalStatus() {
@@ -1459,13 +1333,156 @@ import tower.TowerTypeme {
 	public void setAdditionalStatus(String additionalStatus) {
 		this.additionalStatus = additionalStatus;
 	}
-}
 
-	public BuffType getLastBuffType() {
-		return lastBuffType;
+	public ArrayList<NPC> getNpcs() {
+		return new ArrayList<NPC>(npcs);
 	}
 
-	public void setLastBuffType(BuffType lastBuffType) {
-		this.lastBuffType = lastBuffType;
+	public void setNpcs(ArrayList<NPC> npcs) {
+		this.npcs = npcs;
+	}
+
+	public ArrayList<Sprite> getSprites() {
+		return new ArrayList<Sprite>(sprites);
+	}
+
+	public void setSprites(ArrayList<Sprite> sprites) {
+		this.sprites = sprites;
+	}
+
+	public ArrayList<Tower> getTowers() {
+		return new ArrayList<Tower>(towers);
+	}
+
+	public void setTowers(ArrayList<Tower> towers) {
+		this.towers = towers;
+	}
+
+	public ArrayList<TowerType> getTowerTypes() {
+		return new ArrayList<TowerType>(towerTypes);
+	}
+
+	public void setTowerTypes(ArrayList<TowerType> towerTypes) {
+		this.towerTypes = towerTypes;
+	}
+
+	public ArrayList<NPCType> getNPCTypes() {
+		return new ArrayList<NPCType>(NPCTypes);
+	}
+
+	public void setNPCTypes(ArrayList<NPCType> nPCTypes) {
+		NPCTypes = nPCTypes;
+	}
+
+	public ArrayList<BuffType> getBuffTypes() {
+		return new ArrayList<BuffType>(buffTypes);
+	}
+
+	public void setBuffTypes(ArrayList<BuffType> buffTypes) {
+		this.buffTypes = buffTypes;
+	}
+
+	public ArrayList<Animation> getAnimations() {
+		return new ArrayList<Animation>(animations);
+	}
+
+	public void setAnimations(ArrayList<Animation> animations) {
+		this.animations = animations;
+	}
+
+	public ArrayList<Button> getButtons() {
+		return new ArrayList<Button>(buttons);
+	}
+
+	public void setButtons(ArrayList<Button> buttons) {
+		this.buttons = buttons;
+	}
+	
+	public ArrayList<Projectile> getProjectiles() {
+		return new ArrayList<Projectile>(projectiles);
+	}
+
+	public void setProjectiles(ArrayList<Projectile> projectiles) {
+		this.projectiles = projectiles;
+	}
+
+	public void setNewTower(Tower t) {
+		towers.add(t);
+	}
+	
+	public void destroyTower(Tower t){
+		towers.remove(t);
+	}
+	
+	public void setNewTowerType(TowerType t) {
+		towerTypes.add(t);
+	}
+	
+	public void destroyTowerType(TowerType t) {
+		towerTypes.remove(t);
+	}
+	
+	public void setNewNPC(NPC n) {
+		npcs.add(n);
+	}
+	
+	public void destroyNPC(NPC n) {
+		npcs.remove(n);
+	}
+	
+	public void setNewNPCType(NPCType n) {
+		NPCTypes.add(n);
+	}
+	
+	public void destroyNPCType(NPCType n) {
+		NPCTypes.remove(n);
+	}
+	
+	public void setNewSprite(Sprite s) {
+		sprites.add(s);
+	}
+	
+	public void destroySprite(Sprite s) {
+		sprites.remove(s);
+	}
+	
+	public void setNewAnimation(Animation a){
+		animations.add(a);
+	}
+	
+	public void destroyAnimation(Animation a){
+		animations.remove(a);
+	}
+	
+	public void setNewButton(Button b){
+		buttons.add(b);
+	}
+	
+	public void destroyButton(Button b){
+		buttons.remove(b);
+	}
+	
+	public void setNewBuffType(BuffType b){
+		buffTypes.add(b);
+	}
+	
+	public void destroyBuffType(BuffType b){
+		buffTypes.remove(b);
+	}
+	
+	public void setNewProjectile(Projectile p){
+		projectiles.add(p);
+	}
+	
+	public void destroyProjectile(Projectile p){
+		projectiles.remove(p);
+	}
+
+	public Event getCurrentWave() {
+		return currentWave;
+	}
+
+	public void setCurrentWave(Event currentWave) {
+		this.currentWave = currentWave;
 	}
 }

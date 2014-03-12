@@ -30,7 +30,7 @@ public class TowerSiege extends Tower {
 	public ArrayList<NPC> getNPCsCloseTo(double x, double y){
 		ArrayList<NPC> result = new ArrayList<NPC>();
 		
-		for(NPC npc = m.getGame().getLastNPC(); npc != null; npc = npc.getPrevious()){
+		for(NPC npc : m.getGame().getNpcs()){
 			if(getDistance(npc.getX(), npc.getY(), x, y) < getSplashRadius()*m.getGame().getTileWidth()){
 				if(canAttackIgnoreRange(this,npc)){
 					result.add(npc);

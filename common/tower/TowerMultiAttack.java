@@ -15,8 +15,8 @@ public class TowerMultiAttack extends Tower{
 	public void attack(){
 		NPC targets [] = getClosestNPC(maxTargets);
 		
-		setAAcd(1.0D/getAttackSpeed());
-		setAnimation(ANIMATION_ATTACK);
+		setAAcd(getAAcd() + 1.0D/getAttackSpeed());
+		setAnimation(ANIMATION_POST_ATTACK);
 		
 		for(int loop=0;loop<targets.length;loop++){
 			if(targets[loop]==null){continue;}
@@ -33,14 +33,12 @@ public class TowerMultiAttack extends Tower{
 		NPC all [] = new NPC[m.getGame().getNumberNPC()];
 		int npcs = 0;
 		
-		if(m.getGame().getLastNPC()!=null){
-		for(NPC npc = m.getGame().getLastNPC();npc!=null;npc=npc.getPrevious()){
+		for(NPC npc : m.getGame().getNpcs()){
 			if(!canAttack(this, npc)){continue;}
 			if(getDistance( npc.getX(),npc.getY(),getX(),getY() )<getRange()*m.getGame().getTileWidth()){
 				all[npcs]=npc;
 				npcs++;
 			}
-		}
 		}
 		NPC all2 [] = new NPC[npcs];
 		

@@ -10,7 +10,8 @@ public class BuffType extends Buff {
 
 	private String type;
 	private int id;
-	@SuppressWarprivate int groupIssWarnings("unused")
+	private int groupId;
+	@SuppressWarnings("unused")
 	private Main m;
 	private int duration;
 	private int stackingType;
@@ -18,13 +19,13 @@ public class BuffType extends Buff {
 	private BuffType next;
 	private Map<String,Object> args = new HashMap<String, Object>();
 	
-	public static final String BUFF_SLOW = "buffSlow";
+	public static final String BUFF_SLOW = "slow";
+	public static final String BUFF_FIRE = "fire";
 	
-	@SuppressWarnings("rawtypes")
-	public static final Map<String, Class> types = new HashMap<String, Class>();
-	static{
+	//public static final Map<String, Class> types = new HashMap<String, Class>();
+	/*static{
 		types.put(BUFF_SLOW, BuffSlow.class);
-	}
+	}*/
 	
 	public BuffType(Main m, int id) {
 		super(0, null, 0, null);
@@ -35,6 +36,9 @@ public class BuffType extends Buff {
 	public static void newBuff(String type, int dur, Buffable target, int stackingType, BuffType buffType, Map<String, Object> args){
 		if(type.equals(BUFF_SLOW)){
 			new BuffSlow(dur, (NPC) target, stackingType, buffType, (Double) args.get("slow"));
+		}
+		else if(type.equals(BUFF_FIRE)){
+			new BuffFire(dur, (NPC) target, stackingType, buffType, (Double) args.get("damage"));
 		}
 	}
 	
@@ -112,7 +116,6 @@ public class BuffType extends Buff {
 		this.next = next;
 	}
 
-}
 	
 	public int getGroupId() {
 		return groupId;

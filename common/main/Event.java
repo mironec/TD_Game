@@ -2,8 +2,6 @@ package main;
 
 public abstract class Event {
 
-	private Event previous;
-	private Event next;
 	private int time; 		//in ms
 	private int delay;		//in ms
 	private int repeat;
@@ -28,22 +26,6 @@ public abstract class Event {
 	}
 	
 	public abstract void run (int delta);
-
-	public Event getPrevious() {
-		return previous;
-	}
-
-	public void setPrevious(Event previous) {
-		this.previous = previous;
-	}
-
-	public Event getNext() {
-		return next;
-	}
-
-	public void setNext(Event next) {
-		this.next = next;
-	}
 	
 	public int getTime() {
 		return time;
@@ -51,5 +33,21 @@ public abstract class Event {
 
 	public void setTime(int time) {
 		this.time = time;
+	}
+
+	public int getDelay() {
+		return delay;
+	}
+
+	public void setDelay(int delay) {
+		this.delay = delay;
+	}
+
+	public int getRepeat() {
+		return repeat;
+	}
+
+	public void setRepeat(int repeat) {
+		this.repeat = repeat;
 	}
 }

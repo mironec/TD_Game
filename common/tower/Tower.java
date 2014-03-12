@@ -27,17 +27,18 @@ public class Tower implements Buffable{
 	private int projectileAnimationDeathDuration;
 	private double projectileSpeed;
 	public static final int ANIMATION_STAND=0;
-	public static final int ANIMATION_ATTACK=1;
+	public static final int ANIMATION_PRE_ATTACK=1;
+	public static final int ANIMATION_POST_ATTACK=2;
 	private BufferedImage animationStand;
-	private BufferedImage animationAttack;
+	private BufferedImage animationPreAttack;
+	private BufferedImage animationPostAttack;
 	private int animationStandDuration;
-	private int animationAttackDuration;
+	private int animationPreAttackDuration;
+	private int animationPostAttackDuration;
 	private int animation;
 	private int animationTime;
 	private int x;
 	private int y;
-	private Tower previous;
-	private Tower next;
 	private Sprite sprite;
 	private TowerType towerType;
 	private boolean shootingAir;
@@ -68,8 +69,10 @@ public class Tower implements Buffable{
 	}
 	
 	public void copyFromTower(Tower t){
-		setAnimationAttack(t.getAnimationAttack());
-		setAnimationAttackDuration(t.getAnimationAttackDuration());
+		setAnimationPreAttack(t.getAnimationPreAttack());
+		setAnimationPreAttackDuration(t.getAnimationPreAttackDuration());
+		setAnimationPostAttack(t.getAnimationPostAttack());
+		setAnimationPostAttackDuration(t.getAnimationPostAttackDuration());
 		setAnimationStand(t.getAnimationStand());
 		setAnimationStandDuration(t.getAnimationStandDuration());
 		setAttackSpeed(t.getAttackSpeed());
@@ -95,11 +98,11 @@ public class Tower implements Buffable{
 		if(isNpcInRange()){
 			if(getAttackSpeed()>0&&
 			   getRange()>0&&
-			   getAAcd()==0){
+			   getAAcd()<=0){
 				attack();
 			}
 			if(getAAcd()>0){
-				setAAcd( (getAAcd()-delta/1000D)>0 ? (getAAcd()-delta/1000D) : 0 );
+				setAAcd( getAAcd()-delta/1000D );
 			}
 		}
 	}
@@ -112,12 +115,18 @@ public class Tower implements Buffable{
 		int duration = getAnimationStandDuration();
 		BufferedImage animation = getAnimationStand();
 		
-		if(getAnimation() == ANIMATION_ATTACK){
-			duration = getAnimationAttackDuration();
-			animation = getAnimationAttack();
+		if(getAnimation() == ANIMATION_PRE_ATTACK){
+			duration = getAnimationPreAttackDuration();
+			animation = getAnimationPreAttack();
+		}
+		if(getAnimation() == ANIMATION_POST_ATTACK){
+			duration = getAnimationPostAttackDuration();
+			animation = getAnimationPostAttack();
 		}
 		
-		if(getAnimationTime()+delta > duration && getAnimation() == ANIMATION_ATTACK){ setAnimation(ANIMATION_STAND); }
+		if(getAnimationTime()+delta >= duration && getAnimation() == ANIMATION_POST_ATTACK){setAnimation(ANIMATION_STAND); duration=getAnimationStandDuration(); animation=getAnimationStand();}
+		else if(getAnimationTime()+delta >= duration && getAnimation() == ANIMATION_PRE_ATTACK){setAnimationTime(getAnimationTime()-delta);}
+		else if(getAAcd() * 1000D <= getAnimationPreAttackDuration() && getAnimation() == ANIMATION_STAND){setAnimation(ANIMATION_PRE_ATTACK); duration=getAnimationPreAttackDuration(); animation=getAnimationPreAttack();}
 		setAnimationTime( (getAnimationTime()+delta) % duration );
 		int phase = (int) ( (double)getAnimationTime() / (double)duration * (double)Animation.getImagePhases(animation) );
 		if(getSprite()==null){
@@ -148,13 +157,14 @@ public class Tower implements Buffable{
 		m.getGame().setMoney(m.getGame().getMoney() + ret);
 	}
 	
-	public void upgradeTo(TowerType t){
+	public Tower upgradeTo(TowerType t){
 		if(m.getGame().getMoney()>=t.getCost()){
 			m.getGame().setMoney(m.getGame().getMoney()-t.getCost());
 			Tower t2 = m.getGame().createTower(t);
 			t2.setX(getX());
 			t2.setY(getY());
 			destroy();
+			return t2;
 		}
 		else{
 			m.getGame().setStatus("Not enough money!");
@@ -164,9 +174,12 @@ public class Tower implements Buffable{
 				}
 			});
 		}
+		
+		return null;
 	}
 	
 	public void destroy(){
+		m.getGame().destroySprite(getSprite());
 		m.getGame().destroyTower(this);
 	}
 
@@ -230,8 +243,8 @@ public class Tower implements Buffable{
 		NPC target = getClosestNPC();
 		
 		if(target!=null){
-			setAAcd(1.0D/getAttackSpeed());
-			setAnimation(ANIMATION_ATTACK);
+			setAAcd(getAAcd() + 1.0D/getAttackSpeed());
+			setAnimation(ANIMATION_POST_ATTACK);
 			
 			Projectile p = new Projectile(m, getX(), getY(), target, this);
 			p.setAnimationDeath(getProjectileAnimationDeath());
@@ -274,25 +287,21 @@ public class Tower implements Buffable{
 		double minDistance=Double.MAX_VALUE;
 		NPC closest = null;
 		
-		if(m.getGame().getLastNPC()!=null){
-		for(NPC npc = m.getGame().getLastNPC();npc!=null;npc=npc.getPrevious()){
+		for(NPC npc : m.getGame().getNpcs()){
 			if(!canAttack(this,npc)){continue;}
 			if(getDistance( npc.getX(),npc.getY(),x,y )<minDistance){
 				minDistance=getDistance( npc.getX(),npc.getY(),x,y );
 				closest = npc;
 			}
 		}
-		}
 		return closest;
 	}
 	
 	public boolean isNpcInRange() {
-		if(m.getGame().getLastNPC()!=null){
-		for(NPC npc = m.getGame().getLastNPC();npc!=null;npc=npc.getPrevious()){
+		for(NPC npc : m.getGame().getNpcs()){
 			if( isInRange( npc.getX(),npc.getY(),getX(),getY(),getRange()*m.getGame().getTileWidth() ) ){
 				return true;
 			}
-		}
 		}
 		return false;
 	}
@@ -321,22 +330,6 @@ public class Tower implements Buffable{
 		AAcd = aAcd;
 	}
 
-	public Tower getPrevious() {
-		return previous;
-	}
-
-	public void setPrevious(Tower previous) {
-		this.previous = previous;
-	}
-
-	public Tower getNext() {
-		return next;
-	}
-
-	public void setNext(Tower next) {
-		this.next = next;
-	}
-
 	public Sprite getSprite() {
 		return sprite;
 	}
@@ -353,28 +346,12 @@ public class Tower implements Buffable{
 		this.animationStand = animationStand;
 	}
 
-	public BufferedImage getAnimationAttack() {
-		return animationAttack;
-	}
-
-	public void setAnimationAttack(BufferedImage animationAttack) {
-		this.animationAttack = animationAttack;
-	}
-
 	public int getAnimationStandDuration() {
 		return animationStandDuration;
 	}
 
 	public void setAnimationStandDuration(int animationStandDuration) {
 		this.animationStandDuration = animationStandDuration;
-	}
-
-	public int getAnimationAttackDuration() {
-		return animationAttackDuration;
-	}
-
-	public void setAnimationAttackDuration(int animationAttackDuration) {
-		this.animationAttackDuration = animationAttackDuration;
 	}
 
 	public int getAnimation() {
@@ -466,5 +443,37 @@ public class Tower implements Buffable{
 
 	public void setBuffs(ArrayList<Buff> buffs) {
 		this.buffs = buffs;
+	}
+
+	public BufferedImage getAnimationPreAttack() {
+		return animationPreAttack;
+	}
+
+	public void setAnimationPreAttack(BufferedImage animationPreAttack) {
+		this.animationPreAttack = animationPreAttack;
+	}
+
+	public BufferedImage getAnimationPostAttack() {
+		return animationPostAttack;
+	}
+
+	public void setAnimationPostAttack(BufferedImage animationPostAttack) {
+		this.animationPostAttack = animationPostAttack;
+	}
+
+	public int getAnimationPreAttackDuration() {
+		return animationPreAttackDuration;
+	}
+
+	public void setAnimationPreAttackDuration(int animationPreAttackDuration) {
+		this.animationPreAttackDuration = animationPreAttackDuration;
+	}
+
+	public int getAnimationPostAttackDuration() {
+		return animationPostAttackDuration;
+	}
+
+	public void setAnimationPostAttackDuration(int animationPostAttackDuration) {
+		this.animationPostAttackDuration = animationPostAttackDuration;
 	}
 }

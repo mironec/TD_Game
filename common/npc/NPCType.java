@@ -8,13 +8,12 @@ import main.Main;
 public class NPCType extends NPC{
 
 	private int id;
-	private NPCType previous;
-	private NPCType next;
 	private String type;
 	private Map<String,Object> args = new HashMap<String, Object>();
 	private int perWave;
 	private int betweenSpawns;
 	private int bounty;
+	private String description = "";
 	
 	public static final String NPC_TYPE_REVIVE    = "revive";
 	public static final String NPC_TYPE_FINAL     = "final";
@@ -31,22 +30,6 @@ public class NPCType extends NPC{
 
 	public void setId(int id) {
 		this.id = id;
-	}
-
-	public NPCType getPrevious() {
-		return previous;
-	}
-
-	public void setPrevious(NPCType previous) {
-		this.previous = previous;
-	}
-
-	public NPCType getNext() {
-		return next;
-	}
-
-	public void setNext(NPCType next) {
-		this.next = next;
 	}
 
 	public String getType() {
@@ -95,6 +78,14 @@ public class NPCType extends NPC{
 
 	public void setBetweenSpawns(int betweenSpawns) {
 		this.betweenSpawns = betweenSpawns;
+	}
+
+	public String getDescription() {
+		return description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
 	}
 	
 }

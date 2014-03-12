@@ -6,7 +6,7 @@ import main.Main;
 
 public class NPCResistant extends NPC{
 	
-	@Suppresprivate Map<Integer, Double> against;
+	private Map<Integer, Double> against;
 	
 	public NPCResistant(Main m, double x, double y, npc.NPCType NPCType, Map<Integer, Double> against) {
 		super(m, x, y, NPCType);
